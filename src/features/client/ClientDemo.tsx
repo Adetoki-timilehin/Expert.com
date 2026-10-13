@@ -5,6 +5,7 @@ import FeedbackPrompt from '../../components/feedback/FeedbackPrompt'
 import { categories, categoryIds, getCategory, type CategoryDefinition, type CategoryId } from '../../data/categories'
 import { broadCategories, getBroadCategoryForService, type BroadCategoryId } from '../../data/taxonomy'
 import { classifyRequest, type ClassificationResult } from '../../lib/classifyRequest'
+import { eligibleTiersFor, lowestPriceFor, recommendTierFor, tiers, type ExpertTierId, type TierDefinition } from '../../data/tiers'
 
 /*
  * 60-30-10 Color Rule applied:
@@ -18,9 +19,9 @@ import { classifyRequest, type ClassificationResult } from '../../lib/classifyRe
  * "purposeful" rather than "urgent" — trust-building, not alarm-raising.
  */
 
-type Screen = 'landing' | 'classification' | 'intake' | 'review' | 'pricing' | 'matching' | 'match' | 'chat' | 'complete' | 'history'
+type Screen = 'landing' | 'classification' | 'intake' | 'review' | 'tier-selection' | 'pricing' | 'matching' | 'match' | 'chat' | 'complete' | 'history'
 
-const clientScreens: Screen[] = ['landing', 'classification', 'intake', 'review', 'pricing', 'matching', 'match', 'chat', 'complete', 'history']
+const clientScreens: Screen[] = ['landing', 'classification', 'intake', 'review', 'tier-selection', 'pricing', 'matching', 'match', 'chat', 'complete', 'history']
 
 function getInitialClientScreen(): Screen {
   const saved = localStorage.getItem('specialist.client.screen')
@@ -47,6 +48,9 @@ export default function ClientDemo() {
     () => classifyRequest(requestText, categoryId)
   )
   const [urgency, setUrgency] = useState('This week')
+  const [selectedTierId, setSelectedTierId] = useState<ExpertTierId>(
+    () => (localStorage.getItem('specialist.client.tier') as ExpertTierId | null) ?? 'verified-professional'
+  )
   const [consultationComplete, setConsultationComplete] = useState(
     () => localStorage.getItem('specialist.client.consultationComplete') === 'true'
       || localStorage.getItem('specialist.consultation.status') === 'completed'
@@ -70,6 +74,10 @@ export default function ClientDemo() {
     localStorage.setItem('specialist.client.chatReturn', chatReturnScreen)
   }, [chatReturnScreen])
 
+  useEffect(() => {
+    localStorage.setItem('specialist.client.tier', selectedTierId)
+  }, [selectedTierId])
+
   function goBack() {
     if (screen === 'chat') {
       setScreen(chatReturnScreen)
@@ -80,7 +88,8 @@ export default function ClientDemo() {
       classification: 'landing',
       intake: 'landing',
       review: 'intake',
-      pricing: 'review',
+      'tier-selection': 'review',
+      pricing: 'tier-selection',
       matching: 'pricing',
       match: 'pricing',
       chat: null,
@@ -142,14 +151,38 @@ export default function ClientDemo() {
             question={requestText}
             urgency={urgency}
             onEdit={() => setScreen('intake')}
-            onNext={() => setScreen('pricing')}
+            onNext={() => setScreen('tier-selection')}
           />
         )}
-        {screen === 'pricing'  && <PricingScreen category={category} onNext={() => setScreen('matching')} />}
-        {screen === 'matching' && <MatchingScreen category={category} onNext={() => setScreen('match')} />}
+        {screen === 'tier-selection' && (
+          <TierSelectionScreen
+            categoryId={categoryId}
+            classification={classification}
+            selectedTierId={selectedTierId}
+            onSelect={(tierId) => {
+              setSelectedTierId(tierId)
+              setScreen('pricing')
+            }}
+          />
+        )}
+        {screen === 'pricing' && (
+          <PricingScreen
+            category={category}
+            tierId={selectedTierId}
+            onNext={() => setScreen('matching')}
+          />
+        )}
+        {screen === 'matching' && (
+          <MatchingScreen
+            category={category}
+            tierId={selectedTierId}
+            onNext={() => setScreen('match')}
+          />
+        )}
         {screen === 'match' && (
           <MatchConfirmationScreen
             category={category}
+            tierId={selectedTierId}
             onRematch={() => setScreen('matching')}
             onNext={() => {
               setChatReturnScreen('match')
@@ -160,6 +193,7 @@ export default function ClientDemo() {
         {screen === 'chat' && (
           <ChatScreen
             category={category}
+            tierId={selectedTierId}
             onComplete={() => {
               setConsultationComplete(true)
               localStorage.setItem('specialist.client.consultationComplete', 'true')
@@ -170,6 +204,7 @@ export default function ClientDemo() {
         {screen === 'complete' && (
           <ConsultationCompleteScreen
             category={category}
+            tierId={selectedTierId}
             onHistory={() => setScreen('history')}
             onHome={() => setScreen('landing')}
           />
@@ -177,6 +212,7 @@ export default function ClientDemo() {
         {screen === 'history' && (
           <ConsultationHistoryScreen
             category={category}
+            tierId={selectedTierId}
             complete={consultationComplete}
             onOpen={() => {
               if (consultationComplete) {
@@ -352,7 +388,9 @@ function LandingScreen({
                       <span className="block text-[13px] font-semibold text-[var(--color-slate-100)]">{service.name}</span>
                       <span className="block text-[10px] mt-1 text-[var(--color-slate-400)]">{service.specialist}</span>
                     </span>
-                    <span className="text-[10px] font-semibold text-[var(--color-accent-text)]">From £25</span>
+                    <span className="text-[10px] font-semibold text-[var(--color-accent-text)]">
+                      From £{lowestPriceFor(service.categoryId)}
+                    </span>
                   </span>
                 </button>
                 <div className="flex flex-wrap gap-1.5 mt-3">
@@ -399,7 +437,7 @@ function LandingScreen({
         </AccentBtn>
 
         <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
-          From £25 · No subscription required
+          From £12 · No subscription required
         </p>
       </div>
     </div>
@@ -804,17 +842,261 @@ function RequestReviewScreen({
   )
 }
 
-// ─── Screen 4: Pricing ────────────────────────────────────────────────────────
+// ─── Screen 4a: Tier selection ────────────────────────────────────────────────
 
-function PricingScreen({ category, onNext }: { category: CategoryDefinition; onNext: () => void }) {
+function TierBadge({ tierId, size = 'sm' }: { tierId: ExpertTierId; size?: 'sm' | 'md' }) {
+  const tier = tiers[tierId]
+  const px = size === 'md' ? 'px-2.5 py-1' : 'px-2 py-0.5'
+  const text = size === 'md' ? 'text-[11px]' : 'text-[10px]'
+
+  if (tier.badge === 'outlined-supervised') {
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-full border ${px} ${text} font-semibold`}
+        style={{ borderColor: 'var(--color-slate-600)', color: 'var(--color-slate-400)' }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full border border-current" />
+        Supervised
+      </span>
+    )
+  }
+  if (tier.badge === 'slate') {
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-full ${px} ${text} font-semibold`}
+        style={{ background: 'var(--color-slate-800)', color: 'var(--color-slate-200)' }}
+      >
+        Academy
+      </span>
+    )
+  }
+  if (tier.badge === 'green-verified') {
+    return (
+      <span
+        className={`inline-flex items-center gap-1 rounded-full ${px} ${text} font-semibold`}
+        style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent-text)' }}
+      >
+        <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+          <circle cx="4.5" cy="4.5" r="4" fill="var(--color-accent)"/>
+          <path d="M2.5 4.5l1.5 1.5 2.5-3" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        Verified
+      </span>
+    )
+  }
+  // green-verified-senior
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full ${px} ${text} font-semibold`}
+      style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent-text)' }}
+    >
+      <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+        <circle cx="4.5" cy="4.5" r="4" fill="var(--color-accent)"/>
+        <path d="M2.5 4.5l1.5 1.5 2.5-3" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      Senior Verified
+    </span>
+  )
+}
+
+function TierSelectionScreen({
+  categoryId,
+  classification,
+  selectedTierId,
+  onSelect,
+}: {
+  categoryId: CategoryId
+  classification: ClassificationResult
+  selectedTierId: ExpertTierId
+  onSelect: (tierId: ExpertTierId) => void
+}) {
+  const eligible = eligibleTiersFor(categoryId)
+  const complexity = classification.confidence >= 0.85 ? 'low' : classification.confidence >= 0.65 ? 'standard' : 'complex'
+  const recommendedId = recommendTierFor(categoryId, complexity)
+  const recommended = tiers[recommendedId]
+  const others = eligible.filter((t) => t.id !== recommendedId)
+  const [showOthers, setShowOthers] = useState(false)
+  const [expandedTierId, setExpandedTierId] = useState<ExpertTierId | null>(null)
+
+  const recommendationReason: Record<string, string> = {
+    low: `Your request looks suitable for an ${recommended.name} — it reads as a straightforward query within this pathway.`,
+    standard: `We recommend ${recommended.name === 'Academy Expert' ? 'an' : 'a'} ${recommended.name} for this request.`,
+    complex: `We recommend a ${recommended.name} because your request looks more involved and may benefit from deeper experience.`,
+  }
+
+  function TierCard({ tier, isRecommended = false }: { tier: TierDefinition; isRecommended?: boolean }) {
+    const expanded = expandedTierId === tier.id
+    return (
+      <div
+        className="rounded-2xl border transition-colors"
+        style={{
+          background: 'var(--color-slate-900)',
+          borderColor: isRecommended ? 'var(--color-accent)' : 'var(--color-slate-700)',
+        }}
+      >
+        <div className="p-4">
+          {isRecommended && (
+            <p className="text-[10px] uppercase tracking-wide font-semibold mb-2" style={{ color: 'var(--color-accent-text)' }}>
+              Recommended for your request
+            </p>
+          )}
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className="text-[14px] font-semibold text-[var(--color-slate-100)]">{tier.name}</span>
+                <TierBadge tierId={tier.id} />
+              </div>
+              <p className="text-[11px] leading-relaxed" style={{ color: 'var(--color-slate-400)' }}>
+                {tier.description}
+              </p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <span className="font-display text-[22px] text-[var(--color-slate-100)] leading-none">£{tier.price}</span>
+              <p className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>inc. VAT</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mb-3">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <circle cx="5.5" cy="5.5" r="4.5" stroke="var(--color-slate-600)" strokeWidth="1"/>
+              <path d="M5.5 3.5v2.5l1.5 1" stroke="var(--color-slate-600)" strokeWidth="1" strokeLinecap="round"/>
+            </svg>
+            <span className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>{tier.responseTime}</span>
+            <span className="text-[10px]" style={{ color: 'var(--color-slate-700)' }}>·</span>
+            <span className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>{tier.suitableFor}</span>
+          </div>
+
+          {expanded && (
+            <div className="mb-3 space-y-1.5 py-3 border-t" style={{ borderColor: 'var(--color-slate-800)' }}>
+              {tier.details.map((d) => (
+                <div key={d} className="flex items-start gap-2">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0 mt-0.5">
+                    <path d="M2 5l2 2 4-4" stroke="var(--color-slate-500)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>{d}</span>
+                </div>
+              ))}
+              {tier.hasExternalQualification ? (
+                <p className="text-[10px] mt-2 pt-2 border-t" style={{ borderColor: 'var(--color-slate-800)', color: 'var(--color-slate-600)' }}>
+                  External professional qualification reviewed by SpeciaList.
+                </p>
+              ) : (
+                <p className="text-[10px] mt-2 pt-2 border-t" style={{ borderColor: 'var(--color-slate-800)', color: 'var(--color-slate-600)' }}>
+                  No external professional qualification implied.
+                </p>
+              )}
+              {tier.isSupervised && (
+                <p className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>
+                  Expert payout: £{tier.expertPayout} of your fee goes to the supervisor and candidate.
+                </p>
+              )}
+              {!tier.isSupervised && (
+                <p className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>
+                  Expert payout: £{tier.expertPayout} of your fee.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <AccentBtn
+              onClick={() => onSelect(tier.id)}
+              className="flex-1"
+            >
+              Select {tier.name}
+            </AccentBtn>
+            <button
+              type="button"
+              onClick={() => setExpandedTierId(expanded ? null : tier.id)}
+              className="min-h-11 px-3 rounded-2xl border text-[11px] font-semibold flex-shrink-0"
+              style={{ borderColor: 'var(--color-slate-700)', color: 'var(--color-slate-400)' }}
+            >
+              {expanded ? 'Less' : 'Details'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
+      <div className="pt-2 pb-6">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-slate-600)]">
+          Step 3 of 5
+        </p>
+        <h2 className="text-[var(--color-slate-100)] text-[17px] font-semibold leading-tight">
+          Choose your Expert level
+        </h2>
+      </div>
+
+      <ProgressTrack total={5} done={3} />
+
+      {/* Recommendation rationale */}
+      <div className="rounded-2xl p-4 mb-4 border" style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)' }}>
+        <p className="text-[11px] leading-relaxed" style={{ color: 'var(--color-slate-200)' }}>
+          {recommendationReason[complexity]}
+        </p>
+      </div>
+
+      {/* Recommended card */}
+      <div className="mb-4">
+        <TierCard tier={recommended} isRecommended />
+      </div>
+
+      {/* Compare toggle */}
+      <button
+        type="button"
+        onClick={() => setShowOthers(!showOthers)}
+        className="w-full min-h-11 rounded-2xl border mb-4 text-[12px] font-semibold flex items-center justify-center gap-2 transition-colors"
+        style={{ borderColor: 'var(--color-slate-700)', color: 'var(--color-slate-400)' }}
+      >
+        {showOthers ? 'Hide other options' : 'Compare other Expert levels'}
+        <svg
+          width="12" height="12" viewBox="0 0 12 12" fill="none"
+          className={`transition-transform duration-200 ${showOthers ? 'rotate-180' : ''}`}
+        >
+          <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {showOthers && (
+        <div className="space-y-3 mb-4">
+          {others.map((tier) => (
+            <TierCard key={tier.id} tier={tier} />
+          ))}
+        </div>
+      )}
+
+      <p className="text-center text-[10px] leading-relaxed" style={{ color: 'var(--color-slate-600)' }}>
+        Your chosen level will be matched exactly. If no one is available you will be offered alternatives before any charge.
+      </p>
+    </div>
+  )
+}
+
+// ─── Screen 4b: Pricing ───────────────────────────────────────────────────────
+
+function PricingScreen({
+  category,
+  tierId,
+  onNext,
+}: {
+  category: CategoryDefinition
+  tierId: ExpertTierId
+  onNext: () => void
+}) {
   const [agreed, setAgreed] = useState(false)
+  const tier = tiers[tierId]
+  const vatAmount = +(tier.price - tier.price / 1.2).toFixed(2)
+  const platformFee = +(tier.price / 1.2 - tier.expertPayout).toFixed(2)
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
       <div className="flex items-center pt-2 pb-6">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--color-slate-600)' }}>
-            Step 3 of 4
+            Step 4 of 5
           </p>
           <h2 className="text-[var(--color-slate-100)] text-[17px] font-semibold leading-tight">
             Review &amp; authorise
@@ -822,7 +1104,13 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
         </div>
       </div>
 
-      <ProgressTrack total={4} done={3}/>
+      <ProgressTrack total={5} done={4}/>
+
+      {/* Selected tier reminder */}
+      <div className="flex items-center gap-2 mb-4">
+        <TierBadge tierId={tierId} size="md" />
+        <span className="text-[12px] font-medium" style={{ color: 'var(--color-slate-200)' }}>{tier.name}</span>
+      </div>
 
       {/* Price card — structural shell, accent only on the total value */}
       <div
@@ -836,12 +1124,11 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
             </p>
             <div className="flex items-baseline gap-1.5">
               <span className="font-display text-[52px] text-[var(--color-slate-100)] leading-none">
-                £25
+                £{tier.price}
               </span>
               <span className="text-[13px]" style={{ color: 'var(--color-slate-400)' }}>inc. VAT</span>
             </div>
           </div>
-          {/* Card icon — structural, no accent fill */}
           <div
             className="rounded-2xl p-3 border"
             style={{ background: 'var(--color-slate-800)', borderColor: 'var(--color-slate-700)' }}
@@ -854,30 +1141,28 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
           </div>
         </div>
 
-        {/* Fee breakdown */}
         <div className="space-y-2.5 pt-4 border-t" style={{ borderColor: 'var(--color-slate-800)' }}>
           {[
-            { label: 'Expert consultation (up to 30 min)', value: '£17.50' },
-            { label: 'Platform fee',                       value: '£3.33'  },
-            { label: 'VAT (20%)',                          value: '£4.17'  },
+            { label: `Expert ${tier.name} (up to 30 min)`, value: `£${tier.expertPayout.toFixed(2)}` },
+            { label: 'Platform fee',                        value: `£${platformFee.toFixed(2)}` },
+            { label: 'VAT (20%)',                           value: `£${vatAmount.toFixed(2)}` },
           ].map((row) => (
             <div key={row.label} className="flex items-center justify-between">
               <span className="text-[12px]" style={{ color: 'var(--color-slate-400)' }}>{row.label}</span>
               <span className="text-[12px] font-medium" style={{ color: 'var(--color-slate-200)' }}>{row.value}</span>
             </div>
           ))}
-          {/* Total — only place on this card where accent appears (active meaning) */}
           <div
             className="flex items-center justify-between pt-2.5 border-t"
             style={{ borderColor: 'var(--color-slate-800)' }}
           >
             <span className="text-[13px] font-semibold text-[var(--color-slate-100)]">Total authorised today</span>
-            <span className="text-[15px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£25.00</span>
+            <span className="text-[15px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{tier.price.toFixed(2)}</span>
           </div>
         </div>
       </div>
 
-      {/* What's included — structural panel */}
+      {/* What's included */}
       <div className="rounded-2xl p-4 mb-5" style={{ background: 'var(--color-slate-900)' }}>
         <p className="text-[11px] font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>
           What's included
@@ -890,7 +1175,6 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
             'Free follow-up within 24 hours if needed',
           ].map((item) => (
             <div key={item} className="flex items-start gap-2.5">
-              {/* Checkmark — accent used for positive state signal */}
               <div
                 className="w-4 h-4 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0"
                 style={{ background: 'var(--color-accent-soft)' }}
@@ -905,7 +1189,7 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
         </div>
       </div>
 
-      {/* Saved payment method — structural */}
+      {/* Saved payment method */}
       <div
         className="rounded-2xl px-4 py-3.5 mb-5 flex items-center justify-between border"
         style={{ background: 'var(--color-ground-deep)', borderColor: 'var(--color-slate-700)' }}
@@ -919,13 +1203,12 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
             <p className="text-[11px]" style={{ color: 'var(--color-slate-600)' }}>Expires 09/27</p>
           </div>
         </div>
-        {/* "Change" uses accent-text — it's an interactive affordance */}
         <button className="text-[12px] font-semibold" style={{ color: 'var(--color-accent-text)' }}>
           Change
         </button>
       </div>
 
-      {/* Terms — checkbox active state uses accent */}
+      {/* Terms */}
       <button
         onClick={() => setAgreed(!agreed)}
         className="flex items-start gap-3 mb-6 text-left"
@@ -933,8 +1216,8 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
         <div
           className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all duration-150"
           style={{
-            background:   agreed ? 'var(--color-accent)' : 'transparent',
-            borderColor:  agreed ? 'var(--color-accent)' : 'var(--color-slate-700)',
+            background:  agreed ? 'var(--color-accent)' : 'transparent',
+            borderColor: agreed ? 'var(--color-accent)' : 'var(--color-slate-700)',
           }}
         >
           {agreed && (
@@ -944,7 +1227,7 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
           )}
         </div>
         <p className="text-[12px] leading-[1.55]" style={{ color: 'var(--color-slate-400)' }}>
-          I authorise SpeciaList to reserve £25.00 on my card. It will only be charged when an expert accepts. I have read and agree to the{' '}
+          I authorise SpeciaList to reserve £{tier.price.toFixed(2)} on my card. It will only be charged when an expert accepts. I have read and agree to the{' '}
           <span className="underline" style={{ color: 'var(--color-accent-text)' }}>Terms of Service</span> and{' '}
           <span className="underline" style={{ color: 'var(--color-accent-text)' }}>Privacy Policy</span>.
         </p>
@@ -955,7 +1238,7 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
           <rect x="2" y="6" width="12" height="9" rx="2" stroke="white" strokeWidth="1.6"/>
           <path d="M5 6V4.5a3 3 0 016 0V6" stroke="white" strokeWidth="1.6"/>
         </svg>
-        Authorise &amp; match — £25
+        Authorise &amp; match — £{tier.price}
       </AccentBtn>
       <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
         Secured by Stripe · 256-bit TLS encryption
@@ -966,11 +1249,20 @@ function PricingScreen({ category, onNext }: { category: CategoryDefinition; onN
 
 // ─── Screen 5: Matching ───────────────────────────────────────────────────────
 
-function MatchingScreen({ category, onNext }: { category: CategoryDefinition; onNext: () => void }) {
+function MatchingScreen({
+  category,
+  tierId,
+  onNext,
+}: {
+  category: CategoryDefinition
+  tierId: ExpertTierId
+  onNext: () => void
+}) {
   const [step, setStep] = useState(0)
+  const tierName = tiers[tierId].name
   const matchingSteps = [
     'Authorising payment securely…',
-    `Searching ${category.matchingNoun}…`,
+    `Searching ${tierName} ${category.matchingNoun}…`,
     'Checking availability…',
     'Confirming your match…',
   ]
@@ -1076,14 +1368,17 @@ function MatchingScreen({ category, onNext }: { category: CategoryDefinition; on
 
 function MatchConfirmationScreen({
   category,
+  tierId,
   onRematch,
   onNext,
 }: {
   category: CategoryDefinition
+  tierId: ExpertTierId
   onRematch: () => void
   onNext: () => void
 }) {
   const expert = category.expert
+  const tier = tiers[tierId]
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
@@ -1100,7 +1395,7 @@ function MatchConfirmationScreen({
         <div className="flex items-center gap-4 mb-5">
           <div className="relative flex-shrink-0">
             <img src={expert.image} alt={expert.name} className="w-16 h-16 rounded-2xl object-cover"/>
-            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[var(--color-slate-900)] bg-[var(--color-accent)] flex items-center justify-center">
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[var(--color-slate-900)] bg-[var(--color-slate-700)] flex items-center justify-center">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                 <path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -1108,11 +1403,23 @@ function MatchConfirmationScreen({
           </div>
           <div className="min-w-0">
             <h2 className="text-[17px] font-semibold truncate text-[var(--color-slate-100)]">{expert.name}</h2>
-            <p className="text-[12px] mb-1 text-[var(--color-slate-400)]">{expert.title}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-[12px] text-[var(--color-slate-400)]">{expert.title}</p>
+              <TierBadge tierId={tierId} />
+            </div>
             <p className="text-[11px] font-medium text-[var(--color-accent-text)]">
               {expert.rating} · {expert.reviewCount}
             </p>
           </div>
+        </div>
+
+        <div className="rounded-2xl px-3 py-2 mb-4 flex items-center gap-2" style={{ background: 'var(--color-slate-800)' }}>
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path d="M5.5 1L3 2.5v3c0 2.5 1.5 4 2.5 4s2.5-1.5 2.5-4v-3L5.5 1z" stroke="var(--color-slate-500)" strokeWidth="1"/>
+          </svg>
+          <span className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>
+            Matched as: <strong style={{ color: 'var(--color-slate-200)' }}>{tier.name}</strong> · £{tier.price}
+          </span>
         </div>
 
         <div className="rounded-2xl p-4 mb-4 bg-[var(--color-accent-soft)]">
@@ -1166,7 +1473,15 @@ function MatchConfirmationScreen({
 
 // ─── Screen 7: Chat ───────────────────────────────────────────────────────────
 
-function ChatScreen({ category, onComplete }: { category: CategoryDefinition; onComplete: () => void }) {
+function ChatScreen({
+  category,
+  tierId,
+  onComplete,
+}: {
+  category: CategoryDefinition
+  tierId: ExpertTierId
+  onComplete: () => void
+}) {
   const [input, setInput] = useState('')
   const messagesRef = useRef<HTMLDivElement>(null)
   const expert = category.expert
@@ -1215,13 +1530,9 @@ function ChatScreen({ category, onComplete }: { category: CategoryDefinition; on
             </div>
 
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <p className="text-[var(--color-slate-100)] text-[14px] font-semibold truncate">{expert.name}</p>
-                {/* Verified badge — accent circle, structural checkmark tick */}
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <circle cx="6.5" cy="6.5" r="6" fill="var(--color-accent)"/>
-                  <path d="M3.5 6.5l2 2 3.5-4" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <TierBadge tierId={tierId} />
               </div>
               <p className="text-[11px] truncate" style={{ color: 'var(--color-slate-400)' }}>
                 {expert.title} · {expert.credentials}
@@ -1390,15 +1701,18 @@ function ChatScreen({ category, onComplete }: { category: CategoryDefinition; on
 
 function ConsultationCompleteScreen({
   category,
+  tierId,
   onHistory,
   onHome,
 }: {
   category: CategoryDefinition
+  tierId: ExpertTierId
   onHistory: () => void
   onHome: () => void
 }) {
   const [rating, setRating] = useState(0)
   const expert = category.expert
+  const tier = tiers[tierId]
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
@@ -1421,7 +1735,10 @@ function ConsultationCompleteScreen({
           <img src={expert.image} alt="" className="w-10 h-10 rounded-xl object-cover"/>
           <div>
             <p className="text-[13px] font-semibold text-[var(--color-slate-100)]">{expert.name}</p>
-            <p className="text-[10px] text-[var(--color-slate-400)]">{expert.title}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-[var(--color-slate-400)]">{expert.title}</p>
+              <TierBadge tierId={tierId} />
+            </div>
           </div>
         </div>
         <p className="text-[10px] uppercase tracking-wide font-semibold mb-2 text-[var(--color-slate-400)]">
@@ -1443,6 +1760,25 @@ function ConsultationCompleteScreen({
               <span className="text-[12px] leading-relaxed text-[var(--color-slate-200)]">{step}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Receipt */}
+      <div className="rounded-2xl p-4 mb-4 border border-[var(--color-slate-700)]" style={{ background: 'var(--color-slate-900)' }}>
+        <p className="text-[10px] uppercase tracking-wide font-semibold mb-3" style={{ color: 'var(--color-slate-400)' }}>Receipt</p>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Expert level</span>
+            <TierBadge tierId={tierId} size="md" />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Consultation fee</span>
+            <span className="text-[12px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>£{tier.price.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Expert payout</span>
+            <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>£{tier.expertPayout.toFixed(2)}</span>
+          </div>
         </div>
       </div>
 
@@ -1481,6 +1817,11 @@ function ConsultationCompleteScreen({
         question="Did this consultation give you a useful next step?"
         options={['Yes', 'Partly', 'No']}
       />
+      <FeedbackPrompt
+        questionId="client-tier-clarity"
+        question="Was the difference between Expert levels clear?"
+        options={['Yes', 'Somewhat', 'No']}
+      />
 
       <AccentBtn onClick={onHistory} className="mt-auto">View consultations</AccentBtn>
       <button
@@ -1498,16 +1839,19 @@ function ConsultationCompleteScreen({
 
 function ConsultationHistoryScreen({
   category,
+  tierId,
   complete,
   onOpen,
   onNewRequest,
 }: {
   category: CategoryDefinition
+  tierId: ExpertTierId
   complete: boolean
   onOpen: () => void
   onNewRequest: () => void
 }) {
   const expert = category.expert
+  const tier = tiers[tierId]
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
@@ -1516,12 +1860,13 @@ function ConsultationHistoryScreen({
         <h2 className="font-display text-[30px] text-[var(--color-slate-100)]">Consultations</h2>
       </div>
 
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-2 mb-5 flex-wrap">
         <span className="rounded-full px-3 py-1.5 text-[11px] font-semibold bg-[var(--color-accent-soft)] text-[var(--color-accent-text)]">
           {complete ? 'Completed' : 'Active'}
         </span>
+        <TierBadge tierId={tierId} size="md" />
         <span className="rounded-full px-3 py-1.5 text-[11px] font-medium bg-[var(--color-slate-800)] text-[var(--color-slate-400)]">
-          £25 consultation
+          £{tier.price} consultation
         </span>
       </div>
 
@@ -1544,7 +1889,7 @@ function ConsultationHistoryScreen({
           {complete ? category.consultationSummary : `Your secure consultation with ${expert.firstName} is active.`}
         </span>
         <span className="flex items-center justify-between pt-3 border-t border-[var(--color-slate-700)]">
-          <span className="text-[10px] text-[var(--color-slate-600)]">Today · £25.00</span>
+          <span className="text-[10px] text-[var(--color-slate-600)]">Today · £{tier.price.toFixed(2)}</span>
           <span className="text-[11px] font-semibold text-[var(--color-accent-text)]">
             {complete ? 'View outcome' : 'Open chat'}
           </span>

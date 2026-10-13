@@ -16,6 +16,7 @@ const categoryTerms: Record<CategoryId, string[]> = {
   medical: ['doctor', 'medical', 'symptom', 'headache', 'migraine', 'medication', 'health', 'pain', 'gp', 'suicide', 'self harm'],
   legal: ['legal', 'solicitor', 'employer', 'contract', 'tenancy', 'landlord', 'dismissal', 'rights'],
   beauty: ['skincare', 'skin', 'beauty', 'facial', 'moisturiser', 'acne', 'routine', 'cosmetic'],
+  'career-application': ['cv', 'résumé', 'resume', 'job application', 'cover letter', 'interview', 'job hunt', 'job search', 'career', 'linkedin', 'redundancy', 'promotion', 'salary', 'application'],
 }
 
 const urgentPatterns: { terms: string[]; message: string }[] = [

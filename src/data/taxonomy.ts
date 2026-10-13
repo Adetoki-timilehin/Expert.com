@@ -1,6 +1,6 @@
 import type { CategoryId } from './categories'
 
-export type BroadCategoryId = 'home' | 'care' | 'health' | 'legal' | 'beauty'
+export type BroadCategoryId = 'home' | 'care' | 'health' | 'legal' | 'beauty' | 'career'
 
 export type BroadCategory = {
   id: BroadCategoryId
@@ -15,6 +15,17 @@ export type BroadCategory = {
 }
 
 export const broadCategories: BroadCategory[] = [
+  {
+    id: 'career',
+    name: 'Career & business',
+    description: 'CV reviews, interview preparation and application guidance',
+    availableService: {
+      categoryId: 'career-application',
+      name: 'Career Application Support',
+      specialist: 'Academy-trained career specialist',
+    },
+    plannedServices: ['Business planning', 'LinkedIn profile review', 'Salary negotiation'],
+  },
   {
     id: 'home',
     name: 'Home & property',

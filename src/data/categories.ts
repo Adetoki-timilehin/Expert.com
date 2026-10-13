@@ -1,4 +1,4 @@
-export type CategoryId = 'nanny' | 'plumber' | 'medical' | 'legal' | 'beauty'
+export type CategoryId = 'nanny' | 'plumber' | 'medical' | 'legal' | 'beauty' | 'career-application'
 
 export type CategoryDefinition = {
   id: CategoryId
@@ -204,6 +204,45 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
       image: 'https://images.unsplash.com/photo-1673865641073-4479f93a7776?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBmZW1hbGUlMjBza2luY2FyZSUyMGNvbnN1bHRhbnQlMjBkZXJtYXRvbG9naXN0JTIwcG9ydHJhaXR8ZW58MXx8fHwxNzkxODgyMTQxfDA&ixlib=rb-4.1.0&q=80&w=1080',
       clientMessage: 'Hi Amara — my skin is dry and sensitive and my current routine feels too complicated. I would like help choosing a simpler routine without irritating it further.',
       expertMessage: 'Hi — simplifying is a good first step. I can help with a non-medical routine and product selection, but persistent rashes, pain, bleeding or rapidly changing areas should be assessed by a clinician.\n\nFor now, pause new active ingredients and use a gentle fragrance-free cleanser, a simple moisturiser and broad-spectrum sunscreen. Introduce only one new product at a time and patch test it first.\n\nPlease share the names of the products you currently use and whether you have known allergies or a diagnosed skin condition.',
+    },
+  },
+  'career-application': {
+    id: 'career-application',
+    name: 'Career Application Support',
+    shortName: 'Career support',
+    cardTitle: 'Get career application help',
+    cardSubtitle: 'Academy trained · Verified',
+    landingQuery: "I have an important job application and interview coming up and I'd like help polishing my CV and preparing strong answers.",
+    defaultUrgency: 'This week',
+    intakeLabel: 'Career application specialist',
+    attachmentPrompt: 'Add your CV, job description or cover letter',
+    matchingNoun: 'career specialists',
+    matchingDescription: 'Matching you with a career application specialist for CV and interview guidance.',
+    includedExpert: 'Matched to a trained career application specialist',
+    matchReason: 'Jordan has completed the SpeciaList Academy Career Application pathway and has reviewed over 80 CVs and applications in this category.',
+    verificationItems: [
+      'Identity checked',
+      'Career Application pathway completed',
+      'Scenario assessment passed',
+      'Supervised consultations completed',
+    ],
+    consultationSummary: 'Jordan reviewed the CV structure and recommended leading with a two-line professional summary, quantifying achievements and tailoring the skills section to match the job description keywords. Three interview questions were practised with structured answer frameworks.',
+    nextSteps: [
+      'Rewrite the professional summary to match the role',
+      'Add measurable outcomes to each bullet point',
+      'Practise the three questions with the STAR framework before the interview',
+    ],
+    expert: {
+      name: 'Jordan Brooks',
+      firstName: 'Jordan',
+      title: 'Career Application Specialist',
+      credentials: 'Academy Expert · Career Application · 2 yrs',
+      location: 'London, UK',
+      rating: '4.93',
+      reviewCount: '84 reviews',
+      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&h=160&fit=crop&auto=format',
+      clientMessage: "Hi Jordan — I have a job application and interview coming up. I'd like help making my CV stand out and preparing for the likely interview questions.",
+      expertMessage: "Hi — great timing to prepare properly. I can help you sharpen your CV and build structured answers for the interview, and I've completed the SpeciaList Career Application pathway so this is the work I focus on.\n\nTo give you the most useful feedback, could you share the job description and your current CV? Even a draft is fine.\n\nOnce I've seen the role, I'll highlight the two or three changes that will have the most impact on the application, and we can run through the interview questions most likely to come up for this type of role.",
     },
   },
 }
