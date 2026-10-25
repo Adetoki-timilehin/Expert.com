@@ -3,7 +3,12 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
-import siteConfiguration from './.figma/make/site.json'
+const siteConfiguration = {
+  title: 'Peasy',
+  description: 'Expert marketplace platform',
+  language: 'en',
+  robots: { index: true },
+}
 
 
 // Vite config — https://vitejs.dev/config/
