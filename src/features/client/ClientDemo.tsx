@@ -4,7 +4,8 @@ import AppShell from '../../components/layout/AppShell'
 import FeedbackPrompt from '../../components/feedback/FeedbackPrompt'
 import { categories, categoryIds, getCategory, type CategoryDefinition, type CategoryId } from '../../data/categories'
 import { classifyRequest, type ClassificationResult } from '../../lib/classifyRequest'
-import { eligibleTiersFor, lowestPriceFor, recommendTierFor, tiers, type ExpertTierId, type TierDefinition } from '../../data/tiers'
+import { callPriceFor, eligibleTiersFor, lowestPriceFor, recommendTierFor, tiers, type ExpertTierId, type TierDefinition } from '../../data/tiers'
+import { generateSlots, groupSlotsByDay, type CallSlot } from '../../data/availability'
 
 /*
  * 60-30-10 Color Rule applied:
@@ -18,9 +19,9 @@ import { eligibleTiersFor, lowestPriceFor, recommendTierFor, tiers, type ExpertT
  * "purposeful" rather than "urgent" — trust-building, not alarm-raising.
  */
 
-type Screen = 'landing' | 'confirm' | 'pricing' | 'matching' | 'match' | 'chat' | 'complete' | 'history'
+type Screen = 'landing' | 'confirm' | 'pricing' | 'matching' | 'match' | 'chat' | 'complete' | 'history' | 'call-slots' | 'call-confirm' | 'call-upcoming' | 'call-active' | 'call-complete'
 
-const clientScreens: Screen[] = ['landing', 'confirm', 'pricing', 'matching', 'match', 'chat', 'complete', 'history']
+const clientScreens: Screen[] = ['landing', 'confirm', 'pricing', 'matching', 'match', 'chat', 'complete', 'history', 'call-slots', 'call-confirm', 'call-upcoming', 'call-active', 'call-complete']
 
 function getInitialClientScreen(): Screen {
   const saved = localStorage.getItem('specialist.client.screen')
@@ -57,6 +58,8 @@ export default function ClientDemo() {
   const [chatReturnScreen, setChatReturnScreen] = useState<'match' | 'history'>(
     () => localStorage.getItem('specialist.client.chatReturn') === 'history' ? 'history' : 'match'
   )
+  const [callSlot, setCallSlot] = useState<CallSlot | null>(null)
+  const [callFromChat, setCallFromChat] = useState(false)
   const navigate = useNavigate()
   const category = getCategory(categoryId)
 
@@ -91,6 +94,11 @@ export default function ClientDemo() {
       chat: null,
       complete: 'history',
       history: 'landing',
+      'call-slots': callFromChat ? 'chat' : 'match',
+      'call-confirm': 'call-slots',
+      'call-upcoming': 'history',
+      'call-active': null,
+      'call-complete': 'history',
     }
     const previous = previousScreen[screen]
     if (previous) {
@@ -156,9 +164,13 @@ export default function ClientDemo() {
             category={category}
             tierId={selectedTierId}
             onRematch={() => setScreen('matching')}
-            onNext={() => {
+            onStartChat={() => {
               setChatReturnScreen('match')
               setScreen('chat')
+            }}
+            onScheduleCall={() => {
+              setCallFromChat(false)
+              setScreen('call-slots')
             }}
           />
         )}
@@ -166,11 +178,57 @@ export default function ClientDemo() {
           <ChatScreen
             category={category}
             tierId={selectedTierId}
+            onBookCall={() => {
+              setCallFromChat(true)
+              setScreen('call-slots')
+            }}
             onComplete={() => {
               setConsultationComplete(true)
               localStorage.setItem('specialist.client.consultationComplete', 'true')
               setScreen('complete')
             }}
+          />
+        )}
+        {screen === 'call-slots' && (
+          <CallSlotsScreen
+            category={category}
+            tierId={selectedTierId}
+            fromChat={callFromChat}
+            onSelect={(slot) => {
+              setCallSlot(slot)
+              setScreen('call-confirm')
+            }}
+          />
+        )}
+        {screen === 'call-confirm' && callSlot && (
+          <CallConfirmScreen
+            category={category}
+            tierId={selectedTierId}
+            slot={callSlot}
+            fromChat={callFromChat}
+            onNext={() => setScreen('call-upcoming')}
+          />
+        )}
+        {screen === 'call-upcoming' && callSlot && (
+          <CallUpcomingScreen
+            category={category}
+            tierId={selectedTierId}
+            slot={callSlot}
+            onJoin={() => setScreen('call-active')}
+          />
+        )}
+        {screen === 'call-active' && (
+          <CallActiveScreen
+            category={category}
+            tierId={selectedTierId}
+            onComplete={() => setScreen('call-complete')}
+          />
+        )}
+        {screen === 'call-complete' && (
+          <CallCompleteScreen
+            category={category}
+            onHistory={() => setScreen('history')}
+            onHome={() => setScreen('landing')}
           />
         )}
         {screen === 'complete' && (
@@ -789,6 +847,14 @@ function PricingScreen({
           </div>
         </div>
 
+        {/* Call upgrade note */}
+        {tier.callPrice && (
+          <p className="text-[11px] mb-3 leading-snug" style={{ color: 'var(--color-slate-400)' }}>
+            £{tier.price} chat · £{tier.callPrice} call{' '}
+            <span style={{ color: 'var(--color-slate-600)' }}>(can upgrade from chat)</span>
+          </p>
+        )}
+
         {/* Not-charged-yet notice */}
         <div className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3" style={{ background: 'var(--color-slate-800)' }}>
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
@@ -1045,12 +1111,14 @@ function MatchConfirmationScreen({
   category,
   tierId,
   onRematch,
-  onNext,
+  onStartChat,
+  onScheduleCall,
 }: {
   category: CategoryDefinition
   tierId: ExpertTierId
   onRematch: () => void
-  onNext: () => void
+  onStartChat: () => void
+  onScheduleCall: () => void
 }) {
   const expert = category.expert
   const tier = tiers[tierId]
@@ -1149,13 +1217,32 @@ function MatchConfirmationScreen({
       >
         Request another match
       </button>
-      <AccentBtn onClick={onNext}>
-        Confirm &amp; pay £{tier.price}
+      <AccentBtn onClick={onStartChat}>
+        Confirm &amp; pay £{tier.price} · Start chat
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <rect x="2" y="6" width="12" height="9" rx="2" stroke="white" strokeWidth="1.6"/>
           <path d="M5 6V4.5a3 3 0 016 0V6" stroke="white" strokeWidth="1.6"/>
         </svg>
       </AccentBtn>
+      {tier.callPrice && (
+        <button
+          type="button"
+          onClick={onScheduleCall}
+          className="w-full min-h-12 rounded-2xl mt-3 border text-[13px] font-semibold flex items-center justify-center gap-2"
+          style={{ borderColor: 'var(--color-slate-700)', color: 'var(--color-slate-200)', background: 'var(--color-slate-900)' }}
+        >
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+            <rect x="1" y="3" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4"/>
+            <path d="M5 1v3M10 1v3M1 7h13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+          Schedule a 30-min call — £{tier.callPrice}
+        </button>
+      )}
+      {tier.callPrice && (
+        <p className="text-center text-[11px] mt-2" style={{ color: 'var(--color-slate-600)' }}>
+          Chat fee always counts toward a call
+        </p>
+      )}
     </div>
   )
 }
@@ -1165,10 +1252,12 @@ function MatchConfirmationScreen({
 function ChatScreen({
   category,
   tierId,
+  onBookCall,
   onComplete,
 }: {
   category: CategoryDefinition
   tierId: ExpertTierId
+  onBookCall: () => void
   onComplete: () => void
 }) {
   const [input, setInput] = useState('')
@@ -1229,14 +1318,30 @@ function ChatScreen({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onComplete}
-            className="min-h-10 px-3 rounded-xl border flex-shrink-0 text-[11px] font-semibold"
-            style={{ background: 'var(--color-slate-800)', borderColor: 'var(--color-slate-700)' }}
-          >
-            End
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {tiers[tierId].callPrice && (
+              <button
+                type="button"
+                onClick={onBookCall}
+                className="min-h-10 px-3 rounded-xl border text-[11px] font-semibold flex items-center gap-1.5"
+                style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)', color: 'var(--color-accent-text)' }}
+              >
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                  <rect x="0.5" y="2" width="10" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M3.5 0.5v2M7.5 0.5v2M0.5 5h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                Book call
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onComplete}
+              className="min-h-10 px-3 rounded-xl border flex-shrink-0 text-[11px] font-semibold"
+              style={{ background: 'var(--color-slate-800)', borderColor: 'var(--color-slate-700)' }}
+            >
+              End
+            </button>
+          </div>
         </div>
 
         {/* Stats row — structural only */}
@@ -1570,6 +1675,471 @@ function ConsultationHistoryScreen({
         className="w-full min-h-12 mt-auto rounded-2xl border border-[var(--color-slate-700)] bg-[var(--color-slate-900)] text-[13px] font-semibold text-[var(--color-slate-200)]"
       >
         Start a new request
+      </button>
+    </div>
+  )
+}
+
+// ─── Call screens ─────────────────────────────────────────────────────────────
+
+function CallSlotsScreen({
+  category,
+  tierId,
+  fromChat,
+  onSelect,
+}: {
+  category: CategoryDefinition
+  tierId: ExpertTierId
+  fromChat: boolean
+  onSelect: (slot: CallSlot) => void
+}) {
+  const tier = tiers[tierId]
+  const callPrice = tier.callPrice!
+  const topUp = callPrice - tier.price
+  const slots = generateSlots()
+  const grouped = groupSlotsByDay(slots)
+  const [selected, setSelected] = useState<string | null>(null)
+  const selectedSlot = slots.find((s) => s.id === selected) ?? null
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
+      <div className="pt-2 pb-4">
+        <p className="text-[11px] font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--color-slate-600)' }}>
+          30-min call
+        </p>
+        <h2 className="text-[var(--color-slate-100)] text-[17px] font-semibold leading-tight">
+          Choose a time
+        </h2>
+      </div>
+
+      <div
+        className="rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 border"
+        style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+      >
+        <img src={category.expert.image} alt={category.expert.name} className="w-9 h-9 rounded-xl object-cover flex-shrink-0"/>
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-[var(--color-slate-100)] truncate">{category.expert.name}</p>
+          <p className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>{category.expert.credentials}</p>
+        </div>
+        <div className="ml-auto flex-shrink-0 text-right">
+          <p className="text-[15px] font-semibold text-[var(--color-slate-100)]">£{callPrice}</p>
+          {fromChat && (
+            <p className="text-[10px]" style={{ color: 'var(--color-accent-text)' }}>+£{topUp} top-up</p>
+          )}
+        </div>
+      </div>
+
+      {fromChat && (
+        <div className="rounded-2xl px-4 py-3 mb-5 border" style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)' }}>
+          <p className="text-[12px] leading-snug" style={{ color: 'var(--color-slate-200)' }}>
+            Your £{tier.price} chat payment counts toward this call.{' '}
+            <strong style={{ color: 'var(--color-slate-100)' }}>You'll only be charged £{topUp} more.</strong>
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-5 mb-6">
+        {grouped.map(({ dayLabel, slots: daySlots }) => (
+          <div key={dayLabel}>
+            <p className="text-[11px] font-semibold uppercase tracking-wide mb-2.5" style={{ color: 'var(--color-slate-400)' }}>
+              {dayLabel}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {daySlots.map((slot) => {
+                const active = selected === slot.id
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    onClick={() => setSelected(slot.id)}
+                    aria-pressed={active}
+                    className="rounded-xl px-3 py-2 border text-[12px] font-semibold transition-colors"
+                    style={{
+                      background: active ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
+                      borderColor: active ? 'var(--color-accent)' : 'var(--color-slate-700)',
+                      color: active ? 'var(--color-accent-text)' : 'var(--color-slate-200)',
+                    }}
+                  >
+                    {slot.timeLabel}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <AccentBtn
+        onClick={() => selectedSlot && onSelect(selectedSlot)}
+        disabled={!selected}
+      >
+        Continue to payment
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </AccentBtn>
+    </div>
+  )
+}
+
+function CallConfirmScreen({
+  category,
+  tierId,
+  slot,
+  fromChat,
+  onNext,
+}: {
+  category: CategoryDefinition
+  tierId: ExpertTierId
+  slot: CallSlot
+  fromChat: boolean
+  onNext: () => void
+}) {
+  const [agreed, setAgreed] = useState(false)
+  const tier = tiers[tierId]
+  const callPrice = tier.callPrice!
+  const chargeAmount = fromChat ? callPrice - tier.price : callPrice
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
+      <div className="pt-2 pb-4">
+        <p className="text-[11px] font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--color-slate-600)' }}>
+          Confirm booking
+        </p>
+        <h2 className="text-[var(--color-slate-100)] text-[17px] font-semibold leading-tight">
+          Review &amp; pay
+        </h2>
+      </div>
+
+      {/* Booking summary */}
+      <div className="rounded-3xl p-5 mb-4 border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        <div className="flex items-center gap-3 mb-4 pb-4 border-b" style={{ borderColor: 'var(--color-slate-800)' }}>
+          <img src={category.expert.image} alt={category.expert.name} className="w-12 h-12 rounded-xl object-cover flex-shrink-0"/>
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-[var(--color-slate-100)] truncate">{category.expert.name}</p>
+            <p className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>{category.expert.title}</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {[
+            { label: 'Date', value: slot.dayLabel },
+            { label: 'Time', value: slot.timeLabel },
+            { label: 'Duration', value: '30 minutes' },
+            { label: 'Format', value: 'In-app call · recorded' },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between">
+              <span className="text-[12px]" style={{ color: 'var(--color-slate-400)' }}>{label}</span>
+              <span className="text-[12px] font-medium text-[var(--color-slate-100)]">{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Price summary */}
+      <div className="rounded-2xl p-4 mb-4 border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        {fromChat && (
+          <div className="flex items-center justify-between mb-2.5 pb-2.5 border-b" style={{ borderColor: 'var(--color-slate-800)' }}>
+            <span className="text-[12px]" style={{ color: 'var(--color-slate-400)' }}>Chat already paid</span>
+            <span className="text-[12px] font-medium" style={{ color: 'var(--color-slate-400)' }}>−£{tier.price}</span>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] font-semibold text-[var(--color-slate-100)]">{fromChat ? 'Top-up today' : 'Total today'}</span>
+          <span className="text-[17px] font-bold" style={{ color: 'var(--color-logo-wordmark)' }}>£{chargeAmount}</span>
+        </div>
+        {fromChat && (
+          <p className="text-[10px] mt-1.5" style={{ color: 'var(--color-slate-600)' }}>
+            Total call value £{callPrice} · £{tier.price} paid via chat
+          </p>
+        )}
+      </div>
+
+      {/* Card */}
+      <div className="rounded-2xl px-4 py-3 mb-4 flex items-center gap-3 border" style={{ background: 'var(--color-ground-deep)', borderColor: 'var(--color-slate-700)' }}>
+        <div className="w-10 h-6 bg-[#1a1f71] rounded-md flex items-center justify-center flex-shrink-0">
+          <span className="text-white text-[9px] font-black tracking-tight">VISA</span>
+        </div>
+        <p className="text-[12px] leading-snug text-[var(--color-slate-100)]">
+          Confirming will charge <strong>£{chargeAmount}</strong> to your Visa ending 4242.
+        </p>
+      </div>
+
+      {/* Terms */}
+      <button onClick={() => setAgreed(!agreed)} className="flex items-start gap-3 mb-6 text-left">
+        <div
+          className="w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-all duration-150"
+          style={{ background: agreed ? 'var(--color-accent)' : 'transparent', borderColor: agreed ? 'var(--color-accent)' : 'var(--color-slate-700)' }}
+        >
+          {agreed && (
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M2 5l2.5 2.5 3.5-4" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </div>
+        <p className="text-[12px] leading-[1.55]" style={{ color: 'var(--color-slate-400)' }}>
+          I agree to the call being recorded for quality and auditing purposes. I have read the{' '}
+          <span className="underline" style={{ color: 'var(--color-logo-wordmark)' }}>Terms of Service</span>.
+        </p>
+      </button>
+
+      <AccentBtn onClick={onNext} disabled={!agreed}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <rect x="2" y="6" width="12" height="9" rx="2" stroke="white" strokeWidth="1.6"/>
+          <path d="M5 6V4.5a3 3 0 016 0V6" stroke="white" strokeWidth="1.6"/>
+        </svg>
+        Confirm &amp; pay £{chargeAmount}
+      </AccentBtn>
+      <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
+        Secured by Stripe · 256-bit TLS encryption
+      </p>
+    </div>
+  )
+}
+
+function CallUpcomingScreen({
+  category,
+  tierId,
+  slot,
+  onJoin,
+}: {
+  category: CategoryDefinition
+  tierId: ExpertTierId
+  slot: CallSlot
+  onJoin: () => void
+}) {
+  const expert = category.expert
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
+      <div className="pt-2 pb-6">
+        <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--color-accent-text)' }}>
+          Booking confirmed
+        </p>
+        <h2 className="text-[var(--color-slate-100)] text-[17px] font-semibold leading-tight">
+          Your call is scheduled
+        </h2>
+      </div>
+
+      {/* Call card */}
+      <div className="rounded-3xl p-5 mb-4 border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        <div className="flex items-center gap-4 mb-5">
+          <div className="relative flex-shrink-0">
+            <img src={expert.image} alt={expert.name} className="w-16 h-16 rounded-2xl object-cover"/>
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-[17px] font-semibold truncate text-[var(--color-slate-100)]">{expert.name}</h2>
+            <p className="text-[12px]" style={{ color: 'var(--color-slate-400)' }}>{expert.title}</p>
+            <TierBadge tierId={tierId} />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {[
+            { icon: '📅', label: slot.dayLabel },
+            { icon: '🕐', label: slot.timeLabel + ' · 30 minutes' },
+            { icon: '🎙', label: 'In-app call · recorded for auditing' },
+          ].map(({ icon, label }) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="text-[16px]">{icon}</span>
+              <span className="text-[13px] text-[var(--color-slate-200)]">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-2xl px-4 py-3 mb-6 border" style={{ background: 'var(--color-slate-800)', borderColor: 'var(--color-slate-700)' }}>
+        <p className="text-[11px] leading-relaxed" style={{ color: 'var(--color-slate-400)' }}>
+          You'll be notified 15 minutes before the call. Join from this screen when it's time.
+        </p>
+      </div>
+
+      <AccentBtn onClick={onJoin}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M4 3l9 5-9 5V3z" fill="white"/>
+        </svg>
+        Join call
+      </AccentBtn>
+      <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
+        Demo mode — join anytime
+      </p>
+    </div>
+  )
+}
+
+function CallActiveScreen({
+  category,
+  tierId,
+  onComplete,
+}: {
+  category: CategoryDefinition
+  tierId: ExpertTierId
+  onComplete: () => void
+}) {
+  const expert = category.expert
+  const [muted, setMuted] = useState(false)
+  const [speakerOn, setSpeakerOn] = useState(true)
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => setElapsed((e) => e + 1), 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const mins = Math.floor(elapsed / 60).toString().padStart(2, '0')
+  const secs = (elapsed % 60).toString().padStart(2, '0')
+  const remaining = Math.max(0, 1800 - elapsed)
+  const remMins = Math.floor(remaining / 60).toString().padStart(2, '0')
+  const remSecs = (remaining % 60).toString().padStart(2, '0')
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0 animate-fade-in" style={{ background: 'var(--color-ground-deep)' }}>
+      {/* Expert info */}
+      <div className="flex flex-col items-center pt-10 pb-6 px-6">
+        <div className="relative mb-4">
+          <img src={expert.image} alt={expert.name} className="w-24 h-24 rounded-3xl object-cover"/>
+          <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[var(--color-ground-deep)] bg-[var(--color-accent)]"/>
+        </div>
+        <h2 className="text-[19px] font-semibold text-[var(--color-slate-100)] mb-1">{expert.name}</h2>
+        <p className="text-[12px]" style={{ color: 'var(--color-slate-400)' }}>{expert.title}</p>
+
+        {/* Timer */}
+        <div className="mt-5 text-center">
+          <p className="font-display text-[40px] text-[var(--color-slate-100)] leading-none tracking-tight">{mins}:{secs}</p>
+          <p className="text-[11px] mt-1" style={{ color: 'var(--color-slate-600)' }}>{remMins}:{remSecs} remaining</p>
+        </div>
+
+        {/* Recording indicator */}
+        <div className="flex items-center gap-1.5 mt-4 rounded-full px-3 py-1.5" style={{ background: 'var(--color-slate-900)' }}>
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"/>
+          <span className="text-[10px] font-semibold text-red-400">Recording</span>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex-1"/>
+      <div className="px-8 pb-12">
+        <div className="flex items-center justify-center gap-6 mb-8">
+          <button
+            type="button"
+            onClick={() => setMuted(!muted)}
+            className="w-14 h-14 rounded-full flex items-center justify-center border transition-colors"
+            style={{
+              background: muted ? 'var(--color-slate-700)' : 'var(--color-slate-900)',
+              borderColor: 'var(--color-slate-700)',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              {muted
+                ? <><path d="M3 3l14 14" stroke="var(--color-slate-400)" strokeWidth="1.6" strokeLinecap="round"/><path d="M10 2a3 3 0 013 3v4l-6-6V5a3 3 0 013-3z" stroke="var(--color-slate-400)" strokeWidth="1.4"/><path d="M7 9v1a3 3 0 006 0v-1M10 15v3M7 18h6" stroke="var(--color-slate-400)" strokeWidth="1.4" strokeLinecap="round"/></>
+                : <><path d="M10 2a3 3 0 013 3v5a3 3 0 01-6 0V5a3 3 0 013-3z" stroke="var(--color-slate-200)" strokeWidth="1.4"/><path d="M7 10a3 3 0 006 0M10 15v3M7 18h6" stroke="var(--color-slate-200)" strokeWidth="1.4" strokeLinecap="round"/></>
+              }
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            onClick={onComplete}
+            className="w-16 h-16 rounded-full flex items-center justify-center bg-red-600 hover:bg-red-700 transition-colors"
+          >
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+              <path d="M3 8.5c0-1 .7-2 1.8-2.3A16 16 0 0111 5.5c2.2 0 4.4.3 6.2.7 1.1.3 1.8 1.3 1.8 2.3v1.2c0 .8-.5 1.5-1.3 1.8l-2.4.9c-.7.3-1.5.1-2-.5l-.9-1a8.5 8.5 0 01-2.8 0l-.9 1c-.5.6-1.3.8-2 .5l-2.4-.9C3.5 11.2 3 10.5 3 9.7V8.5z" fill="white"/>
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSpeakerOn(!speakerOn)}
+            className="w-14 h-14 rounded-full flex items-center justify-center border transition-colors"
+            style={{
+              background: speakerOn ? 'var(--color-slate-900)' : 'var(--color-slate-700)',
+              borderColor: 'var(--color-slate-700)',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path d="M3 7h3l4-4v14l-4-4H3V7z" stroke={speakerOn ? 'var(--color-slate-200)' : 'var(--color-slate-400)'} strokeWidth="1.4" strokeLinejoin="round"/>
+              {speakerOn && <path d="M14 6a5 5 0 010 8M12 8a2.5 2.5 0 010 4" stroke="var(--color-slate-200)" strokeWidth="1.4" strokeLinecap="round"/>}
+            </svg>
+          </button>
+        </div>
+
+        <p className="text-center text-[11px]" style={{ color: 'var(--color-slate-600)' }}>
+          Tap the red button to end the call
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function CallCompleteScreen({
+  category,
+  onHistory,
+  onHome,
+}: {
+  category: CategoryDefinition
+  onHistory: () => void
+  onHome: () => void
+}) {
+  const expert = category.expert
+
+  return (
+    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
+      <div className="flex flex-col items-center pt-8 pb-6 text-center">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: 'var(--color-accent-soft)' }}>
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <path d="M6 14l5.5 5.5 10.5-11" stroke="var(--color-accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </div>
+        <h2 className="text-[20px] font-semibold text-[var(--color-slate-100)] mb-2">Call complete</h2>
+        <p className="text-[13px] leading-relaxed max-w-xs" style={{ color: 'var(--color-slate-400)' }}>
+          Your 30-minute call with {expert.firstName} has ended.
+        </p>
+      </div>
+
+      <div className="rounded-2xl p-4 mb-4 border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        <p className="text-[11px] font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>
+          Recording
+        </p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--color-slate-800)' }}>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <circle cx="9" cy="9" r="7" stroke="var(--color-slate-400)" strokeWidth="1.4"/>
+              <path d="M7 6.5l5 2.5-5 2.5V6.5z" fill="var(--color-slate-400)"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-[13px] font-semibold text-[var(--color-slate-100)]">Call recording available</p>
+            <p className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Stored securely · accessible for 90 days</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl p-4 mb-6 border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        <p className="text-[11px] font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>
+          What's next
+        </p>
+        <div className="space-y-2.5">
+          {category.nextSteps.map((step) => (
+            <div key={step} className="flex items-start gap-2.5">
+              <div className="w-4 h-4 rounded-full flex items-center justify-center mt-0.5 flex-shrink-0" style={{ background: 'var(--color-accent-soft)' }}>
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                  <path d="M1.5 4l2 2 3-3" stroke="var(--color-accent)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <span className="text-[12px] leading-[1.5]" style={{ color: 'var(--color-slate-200)' }}>{step}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <AccentBtn onClick={onHistory} className="mb-3">
+        View consultation history
+      </AccentBtn>
+      <button
+        type="button"
+        onClick={onHome}
+        className="w-full min-h-12 rounded-2xl border border-[var(--color-slate-700)] bg-[var(--color-slate-900)] text-[13px] font-semibold text-[var(--color-slate-200)]"
+      >
+        Back to home
       </button>
     </div>
   )

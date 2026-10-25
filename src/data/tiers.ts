@@ -12,6 +12,7 @@ export type TierDefinition = {
   id: ExpertTierId
   name: string
   price: number
+  callPrice?: number
   expertPayout: number
   description: string
   details: string[]
@@ -67,6 +68,7 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
     id: 'verified-professional',
     name: 'Verified Professional',
     price: 25,
+    callPrice: 55,
     expertPayout: 17,
     description: 'Relevant external experience or qualifications reviewed by Peasy.',
     details: [
@@ -86,6 +88,7 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
     id: 'senior-verified-professional',
     name: 'Senior Verified Professional',
     price: 45,
+    callPrice: 90,
     expertPayout: 32,
     description: 'Advanced experience and a strong quality history for more complex requests.',
     details: [
@@ -148,6 +151,10 @@ export function eligibleTiersFor(categoryId: CategoryId): TierDefinition[] {
 export function lowestPriceFor(categoryId: CategoryId): number {
   const eligible = eligibleTiersFor(categoryId)
   return Math.min(...eligible.map((t) => t.price))
+}
+
+export function callPriceFor(tierId: ExpertTierId): number | null {
+  return tiers[tierId].callPrice ?? null
 }
 
 // Recommend a tier based on classification signals
