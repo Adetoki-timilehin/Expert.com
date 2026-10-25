@@ -23,6 +23,8 @@ type Screen = 'landing' | 'confirm' | 'pricing' | 'matching' | 'match' | 'chat' 
 
 const clientScreens: Screen[] = ['landing', 'confirm', 'pricing', 'matching', 'match', 'chat', 'complete', 'history', 'call-slots', 'call-confirm', 'call-upcoming', 'call-active', 'call-complete']
 
+const nonRestorable: Screen[] = ['call-slots', 'call-confirm', 'call-upcoming', 'call-active', 'call-complete']
+
 function getInitialClientScreen(): Screen {
   const saved = localStorage.getItem('specialist.client.screen')
   const completed = localStorage.getItem('specialist.consultation.status') === 'completed'
@@ -30,6 +32,7 @@ function getInitialClientScreen(): Screen {
   if (completed && (saved === 'chat' || saved === 'match' || saved === 'matching')) {
     return 'complete'
   }
+  if (nonRestorable.includes(saved as Screen)) return 'landing'
   return clientScreens.includes(saved as Screen) ? saved as Screen : 'landing'
 }
 
