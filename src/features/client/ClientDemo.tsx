@@ -2123,13 +2123,22 @@ function CallUpcomingScreen({
         </div>
 
         <div className="space-y-3">
-          {[
-            { icon: '📅', label: slot.dayLabel },
-            { icon: '🕐', label: slot.timeLabel + ' · 30 minutes' },
-            { icon: '🎙', label: 'In-app call · recorded for auditing' },
-          ].map(({ icon, label }) => (
+          {([
+            {
+              svg: <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><rect x="1" y="2.5" width="13" height="11.5" rx="2" stroke="var(--color-slate-400)" strokeWidth="1.3"/><path d="M1 6h13M5 1v3M10 1v3" stroke="var(--color-slate-400)" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+              label: slot.dayLabel,
+            },
+            {
+              svg: <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><circle cx="7.5" cy="7.5" r="6" stroke="var(--color-slate-400)" strokeWidth="1.3"/><path d="M7.5 4.5v3l2 1.5" stroke="var(--color-slate-400)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+              label: slot.timeLabel + ' · 30 minutes',
+            },
+            {
+              svg: <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><rect x="5" y="1" width="5" height="8" rx="2.5" stroke="var(--color-slate-400)" strokeWidth="1.3"/><path d="M2.5 7.5a5 5 0 0010 0M7.5 12.5v2" stroke="var(--color-slate-400)" strokeWidth="1.3" strokeLinecap="round"/></svg>,
+              label: 'In-app call · recorded for auditing',
+            },
+          ] as { svg: React.ReactNode; label: string }[]).map(({ svg, label }) => (
             <div key={label} className="flex items-center gap-3">
-              <span className="text-[16px]">{icon}</span>
+              <span className="flex-shrink-0 w-5 flex items-center justify-center">{svg}</span>
               <span className="text-[13px] text-[var(--color-slate-200)]">{label}</span>
             </div>
           ))}
