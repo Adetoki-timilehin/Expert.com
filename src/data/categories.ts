@@ -87,7 +87,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     defaultUrgency: 'Today',
     intakeLabel: 'UK-registered medical professional',
     intakeFields: [
-      { type: 'chips', question: 'How long have you had this?', options: ['A few days', 'About a week', 'Several weeks', 'Over a month'] },
+      { type: 'chips', question: 'How long have you had this?', options: ['Today', 'A few days', 'Several weeks', 'Over a month'] },
       { type: 'chips', question: 'Are you currently on any medication?', options: ['Yes', 'No', 'Prefer not to say'] },
     ],
     attachmentPrompt: 'Add a symptom timeline or current medication list',
