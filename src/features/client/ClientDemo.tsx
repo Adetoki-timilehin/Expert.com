@@ -19,9 +19,9 @@ import { generateSlots, groupSlotsByDay, type CallSlot } from '../../data/availa
  * "purposeful" rather than "urgent" — trust-building, not alarm-raising.
  */
 
-type Screen = 'landing' | 'confirm' | 'pricing' | 'matching' | 'match' | 'chat' | 'complete' | 'history' | 'call-slots' | 'call-confirm' | 'call-upcoming' | 'call-active' | 'call-complete'
+type Screen = 'landing' | 'intake' | 'pricing' | 'matching' | 'match' | 'chat' | 'complete' | 'history' | 'call-slots' | 'call-confirm' | 'call-upcoming' | 'call-active' | 'call-complete'
 
-const clientScreens: Screen[] = ['landing', 'confirm', 'pricing', 'matching', 'match', 'chat', 'complete', 'history', 'call-slots', 'call-confirm', 'call-upcoming', 'call-active', 'call-complete']
+const clientScreens: Screen[] = ['landing', 'intake', 'pricing', 'matching', 'match', 'chat', 'complete', 'history', 'call-slots', 'call-confirm', 'call-upcoming', 'call-active', 'call-complete']
 
 const nonRestorable: Screen[] = ['call-slots', 'call-confirm', 'call-upcoming', 'call-active', 'call-complete']
 
@@ -33,6 +33,8 @@ function getInitialClientScreen(): Screen {
     return 'complete'
   }
   if (nonRestorable.includes(saved as Screen)) return 'landing'
+  // migrate old 'confirm' screen name
+  if (saved === 'confirm') return 'intake'
   return clientScreens.includes(saved as Screen) ? saved as Screen : 'landing'
 }
 
@@ -50,7 +52,6 @@ export default function ClientDemo() {
   const [classification, setClassification] = useState<ClassificationResult>(
     () => classifyRequest(requestText, categoryId)
   )
-  const [urgency, setUrgency] = useState('This week')
   const [selectedTierId, setSelectedTierId] = useState<ExpertTierId>(
     () => (localStorage.getItem('specialist.client.tier') as ExpertTierId | null) ?? 'verified-professional'
   )
@@ -90,8 +91,8 @@ export default function ClientDemo() {
     }
     const previousScreen: Record<Screen, Screen | null> = {
       landing: null,
-      confirm: 'landing',
-      pricing: 'confirm',
+      intake: 'landing',
+      pricing: 'intake',
       matching: 'pricing',
       match: 'pricing',
       chat: null,
@@ -124,24 +125,20 @@ export default function ClientDemo() {
               const result = classifyRequest(query, nextCategory)
               setClassification(result)
               setCategoryId(result.categoryId)
-              setUrgency(categories[result.categoryId].defaultUrgency)
-              setScreen('confirm')
+              setScreen('intake')
             }}
           />
         )}
-        {screen === 'confirm' && (
-          <ConfirmScreen
+        {screen === 'intake' && (
+          <IntakeScreen
             classification={classification}
             categoryId={categoryId}
             question={requestText}
-            urgency={urgency}
             onSelectCategory={(nextCategory) => {
               setCategoryId(nextCategory)
               setClassification(classifyRequest(requestText, nextCategory))
-              setUrgency(categories[nextCategory].defaultUrgency)
             }}
-            onQuestionChange={setRequestText}
-            onUrgencyChange={setUrgency}
+            onBack={() => setScreen('landing')}
             onNext={() => setScreen('pricing')}
           />
         )}
@@ -557,30 +554,84 @@ function TierBadge({ tierId, size = 'sm' }: { tierId: ExpertTierId; size?: 'sm' 
   )
 }
 
-// ─── Screen 2: Confirm ────────────────────────────────────────────────────────
+// ─── Screen 2: Intake ─────────────────────────────────────────────────────────
 
-function ConfirmScreen({
+function IntakeScreen({
   classification,
   categoryId,
   question,
-  urgency,
   onSelectCategory,
-  onQuestionChange,
-  onUrgencyChange,
+  onBack,
   onNext,
 }: {
   classification: ClassificationResult
   categoryId: CategoryId
   question: string
-  urgency: string
   onSelectCategory: (category: CategoryId) => void
-  onQuestionChange: (question: string) => void
-  onUrgencyChange: (urgency: string) => void
+  onBack: () => void
   onNext: () => void
 }) {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false)
+  const [chipSelections, setChipSelections] = useState<Record<number, string>>({})
+  const [attachmentName, setAttachmentName] = useState<string | null>(null)
+  const [safetyAnswer, setSafetyAnswer] = useState<null | 'safe' | 'crisis'>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const category = categories[categoryId]
+  const fields = category.intakeFields ?? []
   const emergencyNumber = classification.safetyMessage?.includes('0800 111 999') ? '0800111999' : '999'
+
+  // Mental-health crisis branch — full-screen, flow stops
+  if (safetyAnswer === 'crisis') {
+    return (
+      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
+        <div className="pt-2 pb-6">
+          <h2 className="text-[var(--color-slate-100)] text-[19px] font-semibold leading-tight mb-1">
+            Please reach out now
+          </h2>
+          <p className="text-[13px] leading-relaxed text-[var(--color-slate-400)]">
+            Your safety matters most. Connect with someone trained to help right now.
+          </p>
+        </div>
+
+        <div className="space-y-3 mb-8">
+          {[
+            { label: 'Samaritans', detail: 'Free · 24/7 · Confidential', number: '116123' },
+            { label: 'Crisis text line', detail: 'Text HELLO to 85258', number: null },
+            { label: 'Emergency services', detail: 'If you are in immediate danger', number: '999' },
+          ].map(({ label, detail, number }) => (
+            <div
+              key={label}
+              className="rounded-2xl p-4 border flex items-center justify-between"
+              style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+            >
+              <div>
+                <p className="text-[14px] font-semibold text-[var(--color-slate-100)]">{label}</p>
+                <p className="text-[12px] mt-0.5" style={{ color: 'var(--color-slate-400)' }}>{detail}</p>
+              </div>
+              {number && (
+                <a
+                  href={`tel:${number}`}
+                  className="min-h-10 px-4 rounded-xl text-[13px] font-semibold flex items-center"
+                  style={{ background: 'var(--color-accent)', color: 'white' }}
+                >
+                  Call
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSafetyAnswer(null)}
+          className="text-center text-[12px]"
+          style={{ color: 'var(--color-slate-600)' }}
+        >
+          I am safe — go back
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
@@ -589,12 +640,16 @@ function ConfirmScreen({
           Step 1 of 2
         </p>
         <h2 className="text-[var(--color-slate-100)] text-[17px] font-semibold leading-tight">
-          Confirm your request
+          A little context
         </h2>
+        <p className="text-[12px] mt-1" style={{ color: 'var(--color-slate-400)' }}>
+          All optional — helps your expert prepare and makes the most of your time together.
+        </p>
       </div>
 
       <ProgressTrack total={2} done={1}/>
 
+      {/* Urgent safety flag (non-mental-health categories) */}
       {classification.urgentSafetyFlag && (
         <div className="rounded-3xl p-5 mb-4 border bg-[var(--color-slate-900)] border-[var(--color-slate-700)]">
           <p className="text-[11px] uppercase tracking-wide font-semibold mb-2 text-[var(--color-slate-100)]">
@@ -611,8 +666,24 @@ function ConfirmScreen({
         </div>
       )}
 
-      {/* Category chip — tappable to reveal picker */}
-      <div className="mb-4">
+      {/* Read-only query bubble */}
+      <div
+        className="rounded-2xl px-4 py-3.5 mb-4 border"
+        style={{ background: 'var(--color-ground-deep)', borderColor: 'var(--color-slate-800)' }}
+      >
+        <p className="text-[13px] leading-relaxed text-[var(--color-slate-200)]">{question}</p>
+        <button
+          type="button"
+          onClick={onBack}
+          className="text-[11px] mt-2 font-medium"
+          style={{ color: 'var(--color-slate-600)' }}
+        >
+          Edit
+        </button>
+      </div>
+
+      {/* Category chip */}
+      <div className="mb-5">
         <button
           type="button"
           onClick={() => setShowCategoryPicker(!showCategoryPicker)}
@@ -624,6 +695,9 @@ function ConfirmScreen({
           </svg>
           <span className="text-[11px] font-semibold" style={{ color: 'var(--color-logo-wordmark)' }}>
             {category.name}
+          </span>
+          <span className="text-[10px] ml-0.5" style={{ color: 'var(--color-accent-text)' }}>
+            Wrong category?
           </span>
           <svg
             width="10" height="10" viewBox="0 0 10 10" fill="none"
@@ -639,7 +713,13 @@ function ConfirmScreen({
               <button
                 key={cId}
                 type="button"
-                onClick={() => { onSelectCategory(cId); setShowCategoryPicker(false) }}
+                onClick={() => {
+                  onSelectCategory(cId)
+                  setShowCategoryPicker(false)
+                  setChipSelections({})
+                  setAttachmentName(null)
+                  setSafetyAnswer(null)
+                }}
                 aria-pressed={categoryId === cId}
                 className="min-h-9 rounded-xl px-3 text-[10px] font-semibold border"
                 style={{
@@ -655,64 +735,151 @@ function ConfirmScreen({
         )}
       </div>
 
-      {/* Editable request */}
-      <div className="mb-4">
-        <textarea
-          value={question}
-          onChange={(e) => onQuestionChange(e.target.value)}
-          rows={6}
-          className="w-full text-[var(--color-slate-100)] text-[13.5px] leading-[1.65] rounded-2xl px-4 py-4 resize-none outline-none transition-colors duration-200"
-          style={{ background: 'var(--color-ground-deep)', border: '1px solid var(--color-slate-700)' }}
-          onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--color-accent)')}
-          onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--color-slate-700)')}
-        />
-        <p className="text-[11px] mt-1.5" style={{ color: 'var(--color-slate-600)' }}>
-          {question.length} characters
-        </p>
-      </div>
+      {/* Intake fields */}
+      <div className="space-y-5 mb-6">
+        {fields.map((field, idx) => {
+          if (field.type === 'chips') {
+            return (
+              <div key={idx}>
+                <p className="text-[13px] font-medium mb-2.5 text-[var(--color-slate-200)]">
+                  {field.question}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {field.options.map((opt) => {
+                    const selected = chipSelections[idx] === opt
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setChipSelections((prev) =>
+                          prev[idx] === opt ? { ...prev, [idx]: '' } : { ...prev, [idx]: opt }
+                        )}
+                        className="min-h-9 rounded-xl px-3.5 text-[12px] font-medium border transition-colors duration-150"
+                        style={{
+                          background: selected ? 'var(--color-accent)' : 'var(--color-slate-900)',
+                          borderColor: selected ? 'var(--color-accent)' : 'var(--color-slate-700)',
+                          color: selected ? 'white' : 'var(--color-slate-300)',
+                        }}
+                      >
+                        {opt}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          }
 
-      {/* Urgency */}
-      <div className="mb-4">
-        <label className="text-[11px] font-medium uppercase tracking-wide mb-2 block" style={{ color: 'var(--color-slate-400)' }}>
-          When do you need help?
-        </label>
-        <div className="flex gap-2">
-          {['Now', 'Today', 'This week'].map((u) => (
-            <button
-              key={u}
-              onClick={() => onUrgencyChange(u)}
-              className="flex-1 py-2.5 rounded-xl text-[12px] font-semibold border transition-all duration-150"
-              style={{
-                background: urgency === u ? 'var(--color-accent)' : 'var(--color-slate-900)',
-                borderColor: urgency === u ? 'var(--color-accent)' : 'var(--color-slate-700)',
-                color: urgency === u ? 'white' : 'var(--color-slate-400)',
-              }}
-            >
-              {u}
-            </button>
-          ))}
-        </div>
+          if (field.type === 'attachment') {
+            return (
+              <div key={idx}>
+                <p className="text-[13px] font-medium mb-2.5 text-[var(--color-slate-200)]">
+                  {field.hint}
+                </p>
+                <input
+                  ref={idx === fields.findIndex((f) => f.type === 'attachment') ? fileInputRef : undefined}
+                  type="file"
+                  className="hidden"
+                  accept="image/*,video/*,.pdf,.doc,.docx"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    setAttachmentName(file?.name ?? null)
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2.5 rounded-2xl px-4 py-3 border w-full text-left transition-colors"
+                  style={{
+                    background: attachmentName ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
+                    borderColor: attachmentName ? 'var(--color-accent-border)' : 'var(--color-slate-700)',
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0">
+                    <path d="M3 10V5a3 3 0 016 0v5.5a1.5 1.5 0 01-3 0V5" stroke="var(--color-slate-400)" strokeWidth="1.4" strokeLinecap="round"/>
+                  </svg>
+                  <span className="text-[12px] font-medium" style={{ color: attachmentName ? 'var(--color-accent-text)' : 'var(--color-slate-400)' }}>
+                    {attachmentName ?? 'Tap to attach a file'}
+                  </span>
+                  {attachmentName && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setAttachmentName(null) }}
+                      className="ml-auto text-[11px]"
+                      style={{ color: 'var(--color-slate-600)' }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </button>
+              </div>
+            )
+          }
+
+          if (field.type === 'safety-check') {
+            return (
+              <div
+                key={idx}
+                className="rounded-2xl p-4 border"
+                style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+              >
+                <p className="text-[13px] font-semibold mb-3 text-[var(--color-slate-100)]">
+                  {field.question}
+                </p>
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSafetyAnswer('safe')}
+                    className="w-full min-h-10 rounded-xl text-[13px] font-semibold border transition-colors"
+                    style={{
+                      background: safetyAnswer === 'safe' ? 'var(--color-accent)' : 'var(--color-slate-800)',
+                      borderColor: safetyAnswer === 'safe' ? 'var(--color-accent)' : 'var(--color-slate-700)',
+                      color: safetyAnswer === 'safe' ? 'white' : 'var(--color-slate-300)',
+                    }}
+                  >
+                    {field.safeOption}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSafetyAnswer('crisis')}
+                    className="w-full min-h-10 rounded-xl text-[13px] font-semibold border transition-colors"
+                    style={{
+                      background: 'var(--color-slate-800)',
+                      borderColor: 'var(--color-slate-700)',
+                      color: 'var(--color-slate-300)',
+                    }}
+                  >
+                    {field.crisisOption}
+                  </button>
+                </div>
+              </div>
+            )
+          }
+
+          return null
+        })}
       </div>
 
       {category.scopeNotice && (
         <p className="text-[10px] leading-relaxed mb-4 text-[var(--color-slate-600)]">{category.scopeNotice}</p>
       )}
 
-      <div className="flex items-start gap-2 mb-6">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0 mt-0.5" aria-hidden="true">
-          <path d="M7 1L3 2.5v4c0 3 1.8 5 4 5.5 2.2-.5 4-2.5 4-5.5v-4L7 1z" stroke="var(--color-slate-600)" strokeWidth="1.2"/>
-        </svg>
-        <p className="text-[11px] leading-relaxed text-[var(--color-slate-600)]">
-          Only this request will be shared with eligible experts. Payment details stay private.
-        </p>
-      </div>
-
-      <AccentBtn onClick={onNext} disabled={!question.trim()} className="mt-auto">
-        {classification.urgentSafetyFlag ? 'Continue (not an emergency)' : 'Continue'}
+      <AccentBtn
+        onClick={onNext}
+        disabled={categoryId === 'mental-health' && safetyAnswer !== 'safe'}
+        className="mt-auto"
+      >
+        {classification.urgentSafetyFlag ? 'Continue (not an emergency)' : 'Find my expert'}
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </AccentBtn>
+
+      {categoryId === 'mental-health' && safetyAnswer !== 'safe' && (
+        <p className="text-center text-[11px] mt-2" style={{ color: 'var(--color-slate-600)' }}>
+          Please answer the safety question above to continue.
+        </p>
+      )}
     </div>
   )
 }

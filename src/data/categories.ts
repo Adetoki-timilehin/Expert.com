@@ -1,5 +1,10 @@
 export type CategoryId = 'plumber' | 'medical' | 'legal' | 'career' | 'immigration' | 'financial' | 'mental-health'
 
+export type IntakeField =
+  | { type: 'chips'; question: string; options: string[] }
+  | { type: 'attachment'; hint: string }
+  | { type: 'safety-check'; question: string; safeOption: string; crisisOption: string }
+
 export type CategoryDefinition = {
   id: CategoryId
   name: string
@@ -9,6 +14,7 @@ export type CategoryDefinition = {
   landingQuery: string
   defaultUrgency: 'Now' | 'Today' | 'This week'
   intakeLabel: string
+  intakeFields: IntakeField[]
   attachmentPrompt: string
   scopeNotice?: string
   matchingNoun: string
@@ -42,6 +48,10 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     landingQuery: 'I have a burst pipe in my kitchen — water is leaking badly and I need an emergency plumber urgently.',
     defaultUrgency: 'Now',
     intakeLabel: 'Emergency plumbing specialist',
+    intakeFields: [
+      { type: 'chips', question: 'How urgent is this?', options: ['Emergency', 'Needs sorting soon', 'Not urgent'] },
+      { type: 'attachment', hint: 'Add a photo or short video of the problem' },
+    ],
     attachmentPrompt: 'Add photos or a short video of the issue',
     matchingNoun: 'emergency plumbing specialists',
     matchingDescription: 'Matching you with an insured UK plumbing specialist available for urgent guidance.',
@@ -76,6 +86,10 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     landingQuery: 'I have been experiencing recurring headaches and would like help understanding what information to prepare for a GP appointment and when to seek urgent care.',
     defaultUrgency: 'Today',
     intakeLabel: 'UK-registered medical professional',
+    intakeFields: [
+      { type: 'chips', question: 'How long have you had this?', options: ['A few days', 'About a week', 'Several weeks', 'Over a month'] },
+      { type: 'chips', question: 'Are you currently on any medication?', options: ['Yes', 'No', 'Prefer not to say'] },
+    ],
     attachmentPrompt: 'Add a symptom timeline or current medication list',
     scopeNotice: 'This consultation provides general guidance and triage support, not a diagnosis or emergency treatment. Call 999 for immediate danger.',
     matchingNoun: 'registered medical professionals',
@@ -111,6 +125,10 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     landingQuery: 'My employer has proposed a change to my contract and I want to understand the questions I should ask and whether I may need formal employment-law advice.',
     defaultUrgency: 'This week',
     intakeLabel: 'UK legal professional',
+    intakeFields: [
+      { type: 'chips', question: 'Is there a deadline involved?', options: ['Within 2 weeks', 'Within a month', 'Not that I know of'] },
+      { type: 'attachment', hint: 'Add the relevant clause or a redacted letter (optional)' },
+    ],
     attachmentPrompt: 'Add the relevant clause or a redacted letter',
     scopeNotice: 'Initial guidance does not create formal legal representation. Do not upload unredacted confidential or legally privileged documents.',
     matchingNoun: 'employment-law professionals',
@@ -146,6 +164,10 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     landingQuery: "I have been made redundant and want to understand my options, update my CV for today's market and think through what kind of role to target next.",
     defaultUrgency: 'This week',
     intakeLabel: 'Career specialist',
+    intakeFields: [
+      { type: 'chips', question: 'What is your current situation?', options: ['Employed', 'Recently redundant', 'Between jobs', 'Changing career'] },
+      { type: 'attachment', hint: 'Add your CV (optional — helps your expert prepare)' },
+    ],
     attachmentPrompt: 'Add your CV, job description or a summary of your situation',
     matchingNoun: 'career specialists',
     matchingDescription: 'Matching you with a verified career specialist for job search, CV and career transition guidance.',
@@ -184,6 +206,10 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     landingQuery: 'My visa is due to expire in three months and I want to understand my options for extending my stay or switching to a different visa category.',
     defaultUrgency: 'This week',
     intakeLabel: 'OISC-regulated immigration adviser',
+    intakeFields: [
+      { type: 'chips', question: 'What is your current immigration status?', options: ['On a visa', 'No visa / overstayed', 'British citizen', 'Other / not sure'] },
+      { type: 'attachment', hint: 'Add your visa or BRP details (optional — redact sensitive info)' },
+    ],
     attachmentPrompt: 'Add your current visa details or BRP information',
     scopeNotice: 'Initial guidance does not create formal legal representation. Individual circumstances vary significantly — always verify with a regulated adviser before submitting any application.',
     matchingNoun: 'regulated immigration advisers',
@@ -219,6 +245,10 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     landingQuery: 'I am self-employed and unsure whether I need to file a self-assessment tax return, what I can claim as expenses, and how to start saving properly.',
     defaultUrgency: 'This week',
     intakeLabel: 'Personal finance specialist',
+    intakeFields: [
+      { type: 'chips', question: 'What is your employment status?', options: ['Employed', 'Self-employed', 'Unemployed', 'Retired'] },
+      { type: 'attachment', hint: 'Add a relevant document or summary (optional)' },
+    ],
     attachmentPrompt: 'Add a rough income summary or list of questions',
     scopeNotice: 'General financial guidance only. This is not regulated financial advice under FCA rules. For regulated investment or pension advice, speak to an FCA-authorised independent financial adviser.',
     matchingNoun: 'personal finance specialists',
@@ -254,6 +284,10 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     landingQuery: 'I have been feeling anxious and overwhelmed for several weeks and I want to understand whether what I am experiencing is normal and what support options are available to me.',
     defaultUrgency: 'Today',
     intakeLabel: 'BACP-registered counsellor',
+    intakeFields: [
+      { type: 'chips', question: 'How long have you been feeling this way?', options: ['A few days', 'About a week', 'A few weeks', 'Longer'] },
+      { type: 'safety-check', question: 'Before we continue — are you currently safe?', safeOption: 'Yes, I am safe', crisisOption: 'I need immediate support' },
+    ],
     attachmentPrompt: 'Add any notes about what you have been experiencing',
     scopeNotice: 'This consultation provides initial support and signposting, not clinical diagnosis or treatment. If you are in immediate crisis, call 999 or Samaritans on 116 123.',
     matchingNoun: 'registered mental health professionals',
