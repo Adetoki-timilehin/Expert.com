@@ -1841,7 +1841,6 @@ function CallConfirmScreen({
             { label: 'Date', value: slot.dayLabel },
             { label: 'Time', value: slot.timeLabel },
             { label: 'Duration', value: '30 minutes' },
-            { label: 'Format', value: 'In-app call · recorded' },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between">
               <span className="text-[12px]" style={{ color: 'var(--color-slate-400)' }}>{label}</span>
@@ -1850,6 +1849,10 @@ function CallConfirmScreen({
           ))}
         </div>
       </div>
+
+      <p className="text-[11px] mb-4 -mt-1" style={{ color: 'var(--color-slate-400)' }}>
+        Calls are recorded for your safety and stored securely.
+      </p>
 
       {/* Price summary */}
       <div className="rounded-2xl p-4 mb-4 border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
