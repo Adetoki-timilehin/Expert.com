@@ -21,9 +21,9 @@
   --color-slate-900:     #132035;   /* card backgrounds */
   --color-slate-800:     #1b2e47;   /* elevated panels */
   --color-slate-700:     #243b5c;   /* borders, hairlines */
-  --color-slate-600:     #2e4d72;   /* subtle dividers */
-  --color-slate-400:     #6b8fad;   /* subdued labels */
-  --color-slate-200:     #a8c0d6;   /* secondary text */
+  --color-slate-600:     #6090ac;   /* subtle dividers */
+  --color-slate-400:     #8ab2cc;   /* subdued labels */
+  --color-slate-200:     #b4ccdd;   /* secondary text */
   --color-slate-100:     #d4e4ef;   /* primary text on dark */
 
   /* ── 10% Accent — calm green (edge taken off) ────────── */
@@ -47,7 +47,7 @@
   --color-slate-900:     #ffffff;
   --color-slate-800:     #edf2f5;
   --color-slate-700:     #d3dde5;
-  --color-slate-600:     #91a3b1;
+  --color-slate-600:     #5c7585;
   --color-slate-400:     #607487;
   --color-slate-200:     #33495c;
   --color-slate-100:     #102334;
