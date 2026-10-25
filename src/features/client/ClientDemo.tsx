@@ -239,7 +239,7 @@ function ProgressTrack({ total, done }: { total: number; done: number }) {
 // ─── Screen 1: Landing ────────────────────────────────────────────────────────
 
 const categoryGridLabel: Record<CategoryId, string> = {
-  plumber: 'Plumbing',
+  plumber: 'Home & property',
   medical: 'Medical',
   legal: 'Legal',
   career: 'Career',
