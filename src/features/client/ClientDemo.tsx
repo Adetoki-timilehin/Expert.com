@@ -758,7 +758,7 @@ function IntakeScreen({
                         style={{
                           background: selected ? 'var(--color-accent)' : 'var(--color-slate-900)',
                           borderColor: selected ? 'var(--color-accent)' : 'var(--color-slate-700)',
-                          color: selected ? 'white' : 'var(--color-slate-300)',
+                          color: selected ? 'white' : 'var(--color-slate-200)',
                         }}
                       >
                         {opt}
@@ -834,7 +834,7 @@ function IntakeScreen({
                     style={{
                       background: safetyAnswer === 'safe' ? 'var(--color-accent)' : 'var(--color-slate-800)',
                       borderColor: safetyAnswer === 'safe' ? 'var(--color-accent)' : 'var(--color-slate-700)',
-                      color: safetyAnswer === 'safe' ? 'white' : 'var(--color-slate-300)',
+                      color: safetyAnswer === 'safe' ? 'white' : 'var(--color-slate-200)',
                     }}
                   >
                     {field.safeOption}
@@ -846,7 +846,7 @@ function IntakeScreen({
                     style={{
                       background: 'var(--color-slate-800)',
                       borderColor: 'var(--color-slate-700)',
-                      color: 'var(--color-slate-300)',
+                      color: 'var(--color-slate-200)',
                     }}
                   >
                     {field.crisisOption}
@@ -1031,7 +1031,7 @@ function PricingScreen({
             <circle cx="6.5" cy="6.5" r="5.5" stroke="var(--color-accent)" strokeWidth="1.3"/>
             <path d="M6.5 5.5v3M6.5 4.5h.01" stroke="var(--color-accent)" strokeWidth="1.3" strokeLinecap="round"/>
           </svg>
-          <span className="text-[11px] leading-snug" style={{ color: 'var(--color-slate-300)' }}>
+          <span className="text-[11px] leading-snug" style={{ color: 'var(--color-slate-200)' }}>
             Your card is not charged yet — only if you accept the match.
           </span>
         </div>
@@ -1328,7 +1328,7 @@ function MatchConfirmationScreen({
 
         <div className="rounded-2xl px-3 py-2 mb-4 flex items-center gap-2" style={{ background: 'var(--color-slate-800)' }}>
           <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-            <path d="M5.5 1L3 2.5v3c0 2.5 1.5 4 2.5 4s2.5-1.5 2.5-4v-3L5.5 1z" stroke="var(--color-slate-500)" strokeWidth="1"/>
+            <path d="M5.5 1L3 2.5v3c0 2.5 1.5 4 2.5 4s2.5-1.5 2.5-4v-3L5.5 1z" stroke="var(--color-slate-600)" strokeWidth="1"/>
           </svg>
           <span className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>
             Matched as: <strong style={{ color: 'var(--color-slate-200)' }}>{tier.name}</strong> · £{tier.price}

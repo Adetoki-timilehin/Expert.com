@@ -285,7 +285,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     defaultUrgency: 'Today',
     intakeLabel: 'BACP-registered counsellor',
     intakeFields: [
-      { type: 'chips', question: 'How long have you been feeling this way?', options: ['A few days', 'About a week', 'A few weeks', 'Longer'] },
+      { type: 'chips', question: 'How long have you been feeling this way?', options: ['Today', 'A few days', 'A few weeks', 'Longer'] },
       { type: 'safety-check', question: 'Before we continue — are you currently safe?', safeOption: 'Yes, I am safe', crisisOption: 'I need immediate support' },
     ],
     attachmentPrompt: 'Add any notes about what you have been experiencing',
