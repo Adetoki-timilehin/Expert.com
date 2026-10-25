@@ -1375,7 +1375,6 @@ function ConsultationCompleteScreen({
   onHistory: () => void
   onHome: () => void
 }) {
-  const [rating, setRating] = useState(0)
   const expert = category.expert
   const tier = tiers[tierId]
 
@@ -1455,38 +1454,18 @@ function ConsultationCompleteScreen({
         <span className="text-[11px] font-semibold text-[var(--color-accent-text)]">Included</span>
       </div>
 
-      <div className="text-center mb-5">
-        <p className="text-[11px] mb-2 text-[var(--color-slate-400)]">How useful was this consultation?</p>
-        <div className="flex items-center justify-center gap-2" aria-label="Rate consultation">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setRating(value)}
-              aria-label={`${value} star${value === 1 ? '' : 's'}`}
-              aria-pressed={rating >= value}
-              className="w-9 h-9 rounded-xl text-[20px] transition-colors"
-              style={{
-                color: rating >= value ? '#f59e0b' : 'var(--color-slate-600)',
-                background: rating >= value ? 'var(--color-slate-900)' : 'transparent',
-              }}
-            >
-              ★
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <FeedbackPrompt
-        questionId="client-useful-next-step"
-        question="Did this consultation give you a useful next step?"
-        options={['Yes', 'Partly', 'No']}
-      />
-      <FeedbackPrompt
-        questionId="client-tier-clarity"
-        question="Was the difference between Expert levels clear?"
-        options={['Yes', 'Somewhat', 'No']}
-      />
+      <a
+        href="https://tally.so/r/yXPWe6"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full min-h-13 mt-2 mb-3 rounded-2xl bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-white text-[15px] font-semibold flex items-center justify-center gap-2 transition-colors"
+      >
+        Share your feedback
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </a>
+      <p className="text-center text-[10px] text-[var(--color-slate-600)] mb-5">Takes 2 minutes — helps us build this properly</p>
 
       <AccentBtn onClick={onHistory} className="mt-auto">View consultations</AccentBtn>
       <button
