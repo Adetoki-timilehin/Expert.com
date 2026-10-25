@@ -754,11 +754,11 @@ function IntakeScreen({
                         onClick={() => setChipSelections((prev) =>
                           prev[idx] === opt ? { ...prev, [idx]: '' } : { ...prev, [idx]: opt }
                         )}
-                        className="min-h-9 rounded-xl px-3.5 text-[12px] font-medium border transition-colors duration-150"
+                        className="min-h-9 rounded-xl px-3.5 text-[12px] font-semibold border transition-colors duration-150"
                         style={{
-                          background: selected ? 'var(--color-accent)' : 'var(--color-slate-900)',
+                          background: selected ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
                           borderColor: selected ? 'var(--color-accent)' : 'var(--color-slate-700)',
-                          color: selected ? 'white' : 'var(--color-slate-200)',
+                          color: selected ? 'var(--color-accent-text)' : 'var(--color-slate-200)',
                         }}
                       >
                         {opt}
@@ -832,9 +832,9 @@ function IntakeScreen({
                     onClick={() => setSafetyAnswer('safe')}
                     className="w-full min-h-10 rounded-xl text-[13px] font-semibold border transition-colors"
                     style={{
-                      background: safetyAnswer === 'safe' ? 'var(--color-accent)' : 'var(--color-slate-800)',
+                      background: safetyAnswer === 'safe' ? 'var(--color-accent-soft)' : 'var(--color-slate-800)',
                       borderColor: safetyAnswer === 'safe' ? 'var(--color-accent)' : 'var(--color-slate-700)',
-                      color: safetyAnswer === 'safe' ? 'white' : 'var(--color-slate-200)',
+                      color: safetyAnswer === 'safe' ? 'var(--color-accent-text)' : 'var(--color-slate-200)',
                     }}
                   >
                     {field.safeOption}
