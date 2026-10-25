@@ -23,7 +23,7 @@ type Screen = 'landing' | 'intake' | 'pricing' | 'matching' | 'match' | 'chat' |
 
 const clientScreens: Screen[] = ['landing', 'intake', 'pricing', 'matching', 'match', 'chat', 'complete', 'history', 'call-slots', 'call-confirm', 'call-upcoming', 'call-active', 'call-complete']
 
-const nonRestorable: Screen[] = ['call-slots', 'call-confirm', 'call-upcoming', 'call-active', 'call-complete']
+const nonRestorable: Screen[] = ['call-slots', 'call-confirm', 'call-active', 'call-complete']
 
 function getInitialClientScreen(): Screen {
   const saved = localStorage.getItem('specialist.client.screen')
@@ -62,7 +62,15 @@ export default function ClientDemo() {
   const [chatReturnScreen, setChatReturnScreen] = useState<'match' | 'history'>(
     () => localStorage.getItem('specialist.client.chatReturn') === 'history' ? 'history' : 'match'
   )
-  const [callSlot, setCallSlot] = useState<CallSlot | null>(null)
+  const [callSlot, setCallSlot] = useState<CallSlot | null>(() => {
+    try {
+      const saved = localStorage.getItem('specialist.client.callSlot')
+      if (!saved) return null
+      const parsed = JSON.parse(saved)
+      parsed.date = new Date(parsed.date)
+      return parsed as CallSlot
+    } catch { return null }
+  })
   const [callFromChat, setCallFromChat] = useState(false)
   const navigate = useNavigate()
   const category = getCategory(categoryId)
@@ -83,6 +91,11 @@ export default function ClientDemo() {
   useEffect(() => {
     localStorage.setItem('specialist.client.tier', selectedTierId)
   }, [selectedTierId])
+
+  useEffect(() => {
+    if (callSlot) localStorage.setItem('specialist.client.callSlot', JSON.stringify(callSlot))
+    else localStorage.removeItem('specialist.client.callSlot')
+  }, [callSlot])
 
   function goBack() {
     if (screen === 'chat') {
@@ -244,6 +257,7 @@ export default function ClientDemo() {
             category={category}
             tierId={selectedTierId}
             complete={consultationComplete}
+            callSlot={callSlot}
             onOpen={() => {
               if (consultationComplete) {
                 setScreen('complete')
@@ -252,6 +266,7 @@ export default function ClientDemo() {
               setChatReturnScreen('history')
               setScreen('chat')
             }}
+            onViewCall={() => setScreen('call-upcoming')}
             onNewRequest={() => setScreen('landing')}
           />
         )}
@@ -1784,13 +1799,17 @@ function ConsultationHistoryScreen({
   category,
   tierId,
   complete,
+  callSlot,
   onOpen,
+  onViewCall,
   onNewRequest,
 }: {
   category: CategoryDefinition
   tierId: ExpertTierId
   complete: boolean
+  callSlot: CallSlot | null
   onOpen: () => void
+  onViewCall: () => void
   onNewRequest: () => void
 }) {
   const expert = category.expert
@@ -1802,6 +1821,34 @@ function ConsultationHistoryScreen({
         <p className="text-[11px] uppercase tracking-wide font-medium text-[var(--color-slate-600)]">Client workspace</p>
         <h2 className="font-display text-[30px] text-[var(--color-slate-100)]">Consultations</h2>
       </div>
+
+      {/* Upcoming call card */}
+      {callSlot && (
+        <button
+          type="button"
+          onClick={onViewCall}
+          className="w-full rounded-3xl p-5 border text-left mb-4"
+          style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)' }}
+        >
+          <span className="flex items-center justify-between mb-3">
+            <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--color-accent-text)]">
+              Upcoming call
+            </span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M5 3l4 4-4 4" stroke="var(--color-accent-text)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+          <span className="flex items-center gap-3">
+            <img src={expert.image} alt="" className="w-10 h-10 rounded-xl object-cover"/>
+            <span className="min-w-0">
+              <span className="block text-[13px] font-semibold truncate text-[var(--color-slate-100)]">{expert.name}</span>
+              <span className="block text-[11px] mt-0.5 text-[var(--color-accent-text)]">
+                {callSlot.dayLabel} · {callSlot.timeLabel}
+              </span>
+            </span>
+          </span>
+        </button>
+      )}
 
       <div className="flex gap-2 mb-5 flex-wrap">
         <span className="rounded-full px-3 py-1.5 text-[11px] font-semibold bg-[var(--color-accent-soft)] text-[var(--color-accent-text)]">
