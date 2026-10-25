@@ -334,13 +334,6 @@ function LandingScreen({
         </div>
       </div>
 
-      {/* Divider */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex-1 h-px" style={{ background: 'var(--color-slate-800)' }} />
-        <span className="text-[10px] font-medium" style={{ color: 'var(--color-slate-600)' }}>or describe your problem</span>
-        <div className="flex-1 h-px" style={{ background: 'var(--color-slate-800)' }} />
-      </div>
-
       {/* Text input */}
       <div className="relative mb-3">
         <textarea
