@@ -917,7 +917,10 @@ function PricingScreen({
         </svg>
         Find my expert · £{tier.price} held
       </AccentBtn>
-      <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
+      <p className="text-center text-[11px] mt-2" style={{ color: 'var(--color-slate-400)' }}>
+        <strong style={{ color: 'var(--color-slate-200)' }}>Full refund</strong> if no suitable expert is found.
+      </p>
+      <p className="text-center text-[11px] mt-1" style={{ color: 'var(--color-slate-600)' }}>
         Secured by Stripe · 256-bit TLS encryption
       </p>
     </div>
