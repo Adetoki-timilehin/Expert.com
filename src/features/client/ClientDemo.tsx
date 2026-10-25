@@ -839,6 +839,17 @@ function PricingScreen({
         )}
       </div>
 
+      {/* Refund guarantee */}
+      <div className="flex items-center gap-2.5 rounded-2xl px-4 py-3 mb-5 border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="flex-shrink-0">
+          <path d="M8 1.5L2 4v4c0 3.5 2.5 6 6 7 3.5-1 6-3.5 6-7V4L8 1.5z" stroke="var(--color-accent)" strokeWidth="1.4" strokeLinejoin="round"/>
+          <path d="M5.5 8l2 2 3-3" stroke="var(--color-accent)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <p className="text-[12px] leading-snug" style={{ color: 'var(--color-slate-200)' }}>
+          <strong style={{ color: 'var(--color-slate-100)' }}>Full refund</strong> if no suitable expert is found.
+        </p>
+      </div>
+
       {/* What's included */}
       <div className="rounded-2xl p-4 mb-5" style={{ background: 'var(--color-slate-900)' }}>
         <p className="text-[11px] font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>
@@ -917,10 +928,7 @@ function PricingScreen({
         </svg>
         Find my expert · £{tier.price} held
       </AccentBtn>
-      <p className="text-center text-[11px] mt-2" style={{ color: 'var(--color-slate-400)' }}>
-        <strong style={{ color: 'var(--color-slate-200)' }}>Full refund</strong> if no suitable expert is found.
-      </p>
-      <p className="text-center text-[11px] mt-1" style={{ color: 'var(--color-slate-600)' }}>
+      <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
         Secured by Stripe · 256-bit TLS encryption
       </p>
     </div>
@@ -1129,8 +1137,8 @@ function MatchConfirmationScreen({
         <div className="w-10 h-6 bg-[#1a1f71] rounded-md flex items-center justify-center flex-shrink-0">
           <span className="text-white text-[9px] font-black tracking-tight">VISA</span>
         </div>
-        <p className="text-[12px] leading-snug" style={{ color: 'var(--color-slate-300)' }}>
-          Confirming will charge <strong style={{ color: 'var(--color-slate-100)' }}>£{tier.price}</strong> to your Visa ending 4242.
+        <p className="text-[12px] leading-snug text-[var(--color-slate-100)]">
+          Confirming will charge <strong>£{tier.price}</strong> to your Visa ending 4242.
         </p>
       </div>
 
