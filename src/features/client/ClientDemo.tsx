@@ -765,10 +765,10 @@ function PricingScreen({
         className="rounded-3xl p-6 mb-5 border"
         style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
       >
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-3">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--color-slate-400)' }}>
-              One-off consultation fee
+              Consultation fee
             </p>
             <div className="flex items-baseline gap-1.5">
               <span className="font-display text-[52px] text-[var(--color-slate-100)] leading-none">
@@ -787,6 +787,17 @@ function PricingScreen({
               <circle cx="6.5" cy="13.5" r="1.5" fill="var(--color-slate-400)"/>
             </svg>
           </div>
+        </div>
+
+        {/* Not-charged-yet notice */}
+        <div className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3" style={{ background: 'var(--color-slate-800)' }}>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+            <circle cx="6.5" cy="6.5" r="5.5" stroke="var(--color-accent)" strokeWidth="1.3"/>
+            <path d="M6.5 5.5v3M6.5 4.5h.01" stroke="var(--color-accent)" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+          <span className="text-[11px] leading-snug" style={{ color: 'var(--color-slate-300)' }}>
+            Your card is not charged yet — only if you accept the match.
+          </span>
         </div>
 
         {/* Collapsible fee breakdown */}
@@ -821,7 +832,7 @@ function PricingScreen({
               className="flex items-center justify-between pt-2.5 border-t"
               style={{ borderColor: 'var(--color-slate-800)' }}
             >
-              <span className="text-[13px] font-semibold text-[var(--color-slate-100)]">Total authorised today</span>
+              <span className="text-[13px] font-semibold text-[var(--color-slate-100)]">Total (charged at match)</span>
               <span className="text-[15px] font-bold" style={{ color: 'var(--color-logo-wordmark)' }}>£{tier.price.toFixed(2)}</span>
             </div>
           </div>
@@ -893,7 +904,7 @@ function PricingScreen({
           )}
         </div>
         <p className="text-[12px] leading-[1.55]" style={{ color: 'var(--color-slate-400)' }}>
-          I authorise Peasy to reserve £{tier.price.toFixed(2)} on my card. It will only be charged when an expert accepts. I have read and agree to the{' '}
+          I authorise Peasy to hold £{tier.price.toFixed(2)} on my card. Nothing is charged until I confirm my matched expert. I have read and agree to the{' '}
           <span className="underline" style={{ color: 'var(--color-logo-wordmark)' }}>Terms of Service</span> and{' '}
           <span className="underline" style={{ color: 'var(--color-logo-wordmark)' }}>Privacy Policy</span>.
         </p>
@@ -904,7 +915,7 @@ function PricingScreen({
           <rect x="2" y="6" width="12" height="9" rx="2" stroke="white" strokeWidth="1.6"/>
           <path d="M5 6V4.5a3 3 0 016 0V6" stroke="white" strokeWidth="1.6"/>
         </svg>
-        Authorise &amp; match — £{tier.price}
+        Find my expert · £{tier.price} held
       </AccentBtn>
       <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
         Secured by Stripe · 256-bit TLS encryption
@@ -1107,6 +1118,19 @@ function MatchConfirmationScreen({
         </span>
       </div>
 
+      {/* Payment confirmation notice */}
+      <div
+        className="rounded-2xl px-4 py-3 mb-4 flex items-center gap-3 border"
+        style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+      >
+        <div className="w-10 h-6 bg-[#1a1f71] rounded-md flex items-center justify-center flex-shrink-0">
+          <span className="text-white text-[9px] font-black tracking-tight">VISA</span>
+        </div>
+        <p className="text-[12px] leading-snug" style={{ color: 'var(--color-slate-300)' }}>
+          Confirming will charge <strong style={{ color: 'var(--color-slate-100)' }}>£{tier.price}</strong> to your Visa ending 4242.
+        </p>
+      </div>
+
       <button
         type="button"
         onClick={onRematch}
@@ -1114,10 +1138,11 @@ function MatchConfirmationScreen({
       >
         Request another match
       </button>
-      <AccentBtn onClick={onNext} className="mt-auto">
-        Start consultation
+      <AccentBtn onClick={onNext}>
+        Confirm &amp; pay £{tier.price}
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          <rect x="2" y="6" width="12" height="9" rx="2" stroke="white" strokeWidth="1.6"/>
+          <path d="M5 6V4.5a3 3 0 016 0V6" stroke="white" strokeWidth="1.6"/>
         </svg>
       </AccentBtn>
     </div>
