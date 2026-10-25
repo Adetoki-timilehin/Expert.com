@@ -14,8 +14,10 @@ const categoryTerms: Record<CategoryId, string[]> = {
   plumber: ['pipe', 'leak', 'water', 'plumber', 'stopcock', 'tap', 'drain', 'toilet', 'boiler', 'gas'],
   medical: ['doctor', 'medical', 'symptom', 'headache', 'migraine', 'medication', 'health', 'pain', 'gp', 'suicide', 'self harm'],
   legal: ['legal', 'solicitor', 'employer', 'contract', 'tenancy', 'landlord', 'dismissal', 'rights'],
-  beauty: ['skincare', 'skin', 'beauty', 'facial', 'moisturiser', 'acne', 'routine', 'cosmetic'],
-  'career-application': ['cv', 'résumé', 'resume', 'job application', 'cover letter', 'interview', 'job hunt', 'job search', 'career', 'linkedin', 'redundancy', 'promotion', 'salary', 'application'],
+  career: ['cv', 'résumé', 'resume', 'job application', 'cover letter', 'interview', 'job hunt', 'job search', 'career', 'linkedin', 'redundancy', 'promotion', 'salary', 'career change', 'career transition', 'laid off', 'made redundant'],
+  immigration: ['visa', 'immigration', 'passport', 'leave to remain', 'right to remain', 'citizenship', 'nationality', 'brp', 'biometric', 'skilled worker', 'student visa', 'tier 2', 'asylum', 'deportation', 'indefinite leave'],
+  financial: ['tax', 'self assessment', 'hmrc', 'savings', 'isa', 'pension', 'debt', 'mortgage', 'budget', 'financial', 'money', 'income', 'expenses', 'self employed', 'national insurance', 'inheritance'],
+  'mental-health': ['anxiety', 'depression', 'mental health', 'counselling', 'therapy', 'stress', 'overwhelmed', 'panic', 'trauma', 'grief', 'loneliness', 'sleep', 'mood', 'wellbeing', 'burnout', 'ptsd'],
 }
 
 const urgentPatterns: { terms: string[]; message: string }[] = [

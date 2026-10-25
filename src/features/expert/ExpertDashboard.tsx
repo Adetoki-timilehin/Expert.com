@@ -6,11 +6,14 @@ import { categories, type CategoryId } from '../../data/categories'
 type WorkspaceScreen = 'dashboard' | 'opportunity' | 'consultation' | 'earnings'
 type ConsultationStatus = 'new' | 'active' | 'completed' | 'declined'
 
+const validCategoryIds: CategoryId[] = ['plumber', 'medical', 'legal', 'career', 'immigration', 'financial', 'mental-health']
+
 function getCategoryId(): CategoryId {
-  const expertCategory = localStorage.getItem('specialist.expert.category')
-  if (expertCategory === 'plumber') return 'plumber'
-  const clientCategory = localStorage.getItem('specialist.client.category')
-  return clientCategory === 'plumber' ? 'plumber' : 'legal'
+  const expertCategory = localStorage.getItem('specialist.expert.category') as CategoryId | null
+  if (expertCategory && validCategoryIds.includes(expertCategory)) return expertCategory
+  const clientCategory = localStorage.getItem('specialist.client.category') as CategoryId | null
+  if (clientCategory && validCategoryIds.includes(clientCategory)) return clientCategory
+  return 'legal'
 }
 
 export default function ExpertDashboard() {

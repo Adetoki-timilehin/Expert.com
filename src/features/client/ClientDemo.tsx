@@ -436,17 +436,41 @@ function CategoryIcon({ category }: { category: CategoryId }) {
       </svg>
     )
   }
-  if (category === 'beauty') {
+  if (category === 'career') {
     return (
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-        <path d="M10 17c4-2.5 6-5.5 6-9a6 6 0 00-12 0c0 3.5 2 6.5 6 9zM7 9c1.5 1 4.5 1 6 0" {...shared}/>
+        <path d="M10 9a3 3 0 100-6 3 3 0 000 6zM5 17c0-3 2-5 5-5" {...shared}/>
+        <path d="M12 14l1.5 1.5L16 13" stroke="var(--color-accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    )
+  }
+  if (category === 'immigration') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <circle cx="10" cy="10" r="7" {...shared}/>
+        <path d="M10 3c-2 2-3 4.5-3 7s1 5 3 7M10 3c2 2 3 4.5 3 7s-1 5-3 7M3 10h14" {...shared}/>
+      </svg>
+    )
+  }
+  if (category === 'financial') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 4v2M10 14v2M6 8h4a2 2 0 010 4H7a2 2 0 000 4h6" {...shared}/>
+        <circle cx="10" cy="10" r="7" {...shared}/>
+      </svg>
+    )
+  }
+  if (category === 'mental-health') {
+    return (
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path d="M10 17s-7-4.5-7-9a5 5 0 0110 0" {...shared}/>
+        <path d="M13 8a3 3 0 014 4c0 2.5-2 4.5-4 6" {...shared}/>
       </svg>
     )
   }
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <path d="M10 9a3 3 0 100-6 3 3 0 000 6zM5 17c0-3 2-5 5-5" {...shared}/>
-      <path d="M12 14l1.5 1.5L16 13" stroke="var(--color-accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10 9a3 3 0 100-6 3 3 0 000 6zM5 17c0-3 2-5 5-5s5 2 5 5" {...shared}/>
     </svg>
   )
 }

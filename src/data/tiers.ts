@@ -108,7 +108,7 @@ export const tierIds = Object.keys(tiers) as ExpertTierId[]
 
 // Which tiers are eligible per category — enforces safeguarding and safety-critical rules
 const categoryTierEligibility: Record<CategoryId, ExpertTierId[]> = {
-  'career-application': [
+  career: [
     'supervised-candidate',
     'academy-expert',
     'verified-professional',
@@ -126,8 +126,15 @@ const categoryTierEligibility: Record<CategoryId, ExpertTierId[]> = {
     'verified-professional',
     'senior-verified-professional',
   ],
-  beauty: [
-    'academy-expert',
+  immigration: [
+    'verified-professional',
+    'senior-verified-professional',
+  ],
+  financial: [
+    'verified-professional',
+    'senior-verified-professional',
+  ],
+  'mental-health': [
     'verified-professional',
     'senior-verified-professional',
   ],

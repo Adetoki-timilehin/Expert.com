@@ -1,6 +1,6 @@
 import type { CategoryId } from './categories'
 
-export type BroadCategoryId = 'home' | 'health' | 'legal' | 'beauty' | 'career'
+export type BroadCategoryId = 'home' | 'health' | 'legal' | 'career' | 'immigration' | 'financial' | 'mental-health'
 
 export type BroadCategory = {
   id: BroadCategoryId
@@ -15,17 +15,6 @@ export type BroadCategory = {
 }
 
 export const broadCategories: BroadCategory[] = [
-  {
-    id: 'career',
-    name: 'Career & business',
-    description: 'CV reviews, interview preparation and application guidance',
-    availableService: {
-      categoryId: 'career-application',
-      name: 'Career Application Support',
-      specialist: 'Academy-trained career specialist',
-    },
-    plannedServices: ['Business planning', 'LinkedIn profile review', 'Salary negotiation'],
-  },
   {
     id: 'home',
     name: 'Home & property',
@@ -60,15 +49,48 @@ export const broadCategories: BroadCategory[] = [
     plannedServices: ['Housing solicitor', 'Family solicitor', 'Mediator'],
   },
   {
-    id: 'beauty',
-    name: 'Beauty & personal care',
-    description: 'Qualified, non-medical personal-care guidance',
+    id: 'career',
+    name: 'Career & work',
+    description: 'Redundancy, CV, career transitions and job search',
     availableService: {
-      categoryId: 'beauty',
-      name: 'Skincare routines',
-      specialist: 'Qualified skin therapist',
+      categoryId: 'career',
+      name: 'Career guidance',
+      specialist: 'ICF-certified career coach',
     },
-    plannedServices: ['Trichologist', 'Aesthetic practitioner', 'Makeup artist'],
+    plannedServices: ['Business planning', 'LinkedIn profile review', 'Salary negotiation'],
+  },
+  {
+    id: 'immigration',
+    name: 'Immigration',
+    description: 'Visa guidance, right to remain and citizenship queries',
+    availableService: {
+      categoryId: 'immigration',
+      name: 'Immigration guidance',
+      specialist: 'OISC-regulated immigration adviser',
+    },
+    plannedServices: ['Asylum support', 'Right to work checks', 'Citizenship applications'],
+  },
+  {
+    id: 'financial',
+    name: 'Money & finance',
+    description: 'Tax, savings, debt and personal financial planning',
+    availableService: {
+      categoryId: 'financial',
+      name: 'Personal finance guidance',
+      specialist: 'Qualified personal finance specialist',
+    },
+    plannedServices: ['Debt advice', 'Pension guidance', 'Benefits entitlement'],
+  },
+  {
+    id: 'mental-health',
+    name: 'Mental health',
+    description: 'Initial support, signposting and coping strategies',
+    availableService: {
+      categoryId: 'mental-health',
+      name: 'Mental health support',
+      specialist: 'BACP-registered counsellor',
+    },
+    plannedServices: ['Relationship counselling', 'Grief support', 'Trauma-informed therapy'],
   },
 ]
 
