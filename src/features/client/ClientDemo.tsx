@@ -1698,12 +1698,15 @@ function CallSlotsScreen({
   const topUp = callPrice - tier.price
   const slots = generateSlots()
   const grouped = groupSlotsByDay(slots)
+  const [activeDayIndex, setActiveDayIndex] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
   const selectedSlot = slots.find((s) => s.id === selected) ?? null
+  const activeGroup = grouped[activeDayIndex]
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
-      <div className="pt-2 pb-4">
+    <div className="flex flex-col flex-1 min-h-0 animate-fade-in">
+      {/* Header */}
+      <div className="flex-shrink-0 px-6 pt-2 pb-4">
         <p className="text-[11px] font-medium uppercase tracking-wide mb-1" style={{ color: 'var(--color-slate-600)' }}>
           30-min call
         </p>
@@ -1712,72 +1715,85 @@ function CallSlotsScreen({
         </h2>
       </div>
 
-      <div
-        className="rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 border"
-        style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
-      >
-        <img src={category.expert.image} alt={category.expert.name} className="w-9 h-9 rounded-xl object-cover flex-shrink-0"/>
-        <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-[var(--color-slate-100)] truncate">{category.expert.name}</p>
-          <p className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>{category.expert.credentials}</p>
-        </div>
-        <div className="ml-auto flex-shrink-0 text-right">
-          <p className="text-[15px] font-semibold text-[var(--color-slate-100)]">£{callPrice}</p>
-          {fromChat && (
-            <p className="text-[10px]" style={{ color: 'var(--color-accent-text)' }}>+£{topUp} top-up</p>
-          )}
-        </div>
+      {/* Day strip */}
+      <div className="flex-shrink-0 flex gap-2 overflow-x-auto px-6 pb-4" style={{ scrollbarWidth: 'none' }}>
+        {grouped.map(({ dayLabel }, i) => {
+          const [dayName, date, month] = dayLabel.split(' ')
+          const active = activeDayIndex === i
+          return (
+            <button
+              key={dayLabel}
+              type="button"
+              onClick={() => { setActiveDayIndex(i); setSelected(null) }}
+              className="flex-shrink-0 flex flex-col items-center rounded-2xl px-3 py-2.5 border min-w-[52px] transition-colors"
+              style={{
+                background: active ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
+                borderColor: active ? 'var(--color-accent)' : 'var(--color-slate-700)',
+              }}
+            >
+              <span className="text-[10px] font-semibold uppercase" style={{ color: active ? 'var(--color-accent-text)' : 'var(--color-slate-400)' }}>
+                {dayName.slice(0, 3)}
+              </span>
+              <span className="text-[16px] font-bold leading-tight" style={{ color: active ? 'var(--color-slate-100)' : 'var(--color-slate-200)' }}>
+                {date}
+              </span>
+              <span className="text-[9px]" style={{ color: active ? 'var(--color-accent-text)' : 'var(--color-slate-600)' }}>
+                {month}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {fromChat && (
-        <div className="rounded-2xl px-4 py-3 mb-5 border" style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)' }}>
-          <p className="text-[12px] leading-snug" style={{ color: 'var(--color-slate-200)' }}>
-            Your £{tier.price} chat payment counts toward this call.{' '}
-            <strong style={{ color: 'var(--color-slate-100)' }}>You'll only be charged £{topUp} more.</strong>
-          </p>
-        </div>
-      )}
-
-      <div className="space-y-5 mb-6">
-        {grouped.map(({ dayLabel, slots: daySlots }) => (
-          <div key={dayLabel}>
-            <p className="text-[11px] font-semibold uppercase tracking-wide mb-2.5" style={{ color: 'var(--color-slate-400)' }}>
-              {dayLabel}
+      {/* Time slots for selected day */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-4">
+        {fromChat && (
+          <div className="rounded-2xl px-4 py-3 mb-4 border" style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)' }}>
+            <p className="text-[12px] leading-snug" style={{ color: 'var(--color-slate-200)' }}>
+              Your £{tier.price} chat payment counts toward this call.{' '}
+              <strong style={{ color: 'var(--color-slate-100)' }}>You'll only be charged £{topUp} more.</strong>
             </p>
-            <div className="flex flex-wrap gap-2">
-              {daySlots.map((slot) => {
-                const active = selected === slot.id
-                return (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    onClick={() => setSelected(slot.id)}
-                    aria-pressed={active}
-                    className="rounded-xl px-3 py-2 border text-[12px] font-semibold transition-colors"
-                    style={{
-                      background: active ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
-                      borderColor: active ? 'var(--color-accent)' : 'var(--color-slate-700)',
-                      color: active ? 'var(--color-accent-text)' : 'var(--color-slate-200)',
-                    }}
-                  >
-                    {slot.timeLabel}
-                  </button>
-                )
-              })}
-            </div>
           </div>
-        ))}
+        )}
+
+        <p className="text-[12px] font-semibold mb-3 text-[var(--color-slate-100)]">
+          {activeGroup?.dayLabel}
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {activeGroup?.slots.map((slot) => {
+            const active = selected === slot.id
+            return (
+              <button
+                key={slot.id}
+                type="button"
+                onClick={() => setSelected(slot.id)}
+                aria-pressed={active}
+                className="rounded-xl py-3 border text-[12px] font-semibold transition-colors"
+                style={{
+                  background: active ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
+                  borderColor: active ? 'var(--color-accent)' : 'var(--color-slate-700)',
+                  color: active ? 'var(--color-accent-text)' : 'var(--color-slate-200)',
+                }}
+              >
+                {slot.timeLabel}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      <AccentBtn
-        onClick={() => selectedSlot && onSelect(selectedSlot)}
-        disabled={!selected}
-      >
-        Continue to payment
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </AccentBtn>
+      {/* CTA */}
+      <div className="flex-shrink-0 px-6 pb-8 pt-3 border-t" style={{ borderColor: 'var(--color-slate-800)' }}>
+        <AccentBtn
+          onClick={() => selectedSlot && onSelect(selectedSlot)}
+          disabled={!selected}
+        >
+          Continue to payment
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </AccentBtn>
+      </div>
     </div>
   )
 }
