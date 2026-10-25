@@ -28,7 +28,7 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
     name: 'Supervised Academy Candidate',
     price: 12,
     expertPayout: 7,
-    description: 'Currently completing the SpeciaList Academy pathway. The consultation is reviewed by an experienced supervisor.',
+    description: 'Currently completing the Peasy Academy pathway. The consultation is reviewed by an experienced supervisor.',
     details: [
       'Identity checked',
       'Training in progress',
@@ -48,7 +48,7 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
     name: 'Academy Expert',
     price: 18,
     expertPayout: 11,
-    description: 'Trained and assessed through the SpeciaList Academy. Suitable for standard guidance within their completed pathway.',
+    description: 'Trained and assessed through the Peasy Academy. Suitable for standard guidance within their completed pathway.',
     details: [
       'Identity checked',
       'Academy pathway completed',
@@ -68,7 +68,7 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
     name: 'Verified Professional',
     price: 25,
     expertPayout: 17,
-    description: 'Relevant external experience or qualifications reviewed by SpeciaList.',
+    description: 'Relevant external experience or qualifications reviewed by Peasy.',
     details: [
       'Identity checked',
       'External credentials reviewed',
@@ -111,10 +111,6 @@ const categoryTierEligibility: Record<CategoryId, ExpertTierId[]> = {
   'career-application': [
     'supervised-candidate',
     'academy-expert',
-    'verified-professional',
-    'senior-verified-professional',
-  ],
-  nanny: [
     'verified-professional',
     'senior-verified-professional',
   ],

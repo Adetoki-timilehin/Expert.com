@@ -8,14 +8,17 @@ export default function RouteHydrateFallback() {
         className="w-full h-full max-w-none max-h-none overflow-hidden rounded-none flex items-center justify-center sm:max-w-[390px] sm:max-h-[844px] sm:rounded-[44px]"
         style={{ background: 'var(--color-ground-base)', boxShadow: 'var(--app-shadow)' }}
       >
-        <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
-          <div className="w-9 h-9 rounded-xl bg-[var(--color-accent)] flex items-center justify-center">
-            <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M7 1.5L9.5 6H12L8.5 9l1 3.5L7 10.5 3.5 12.5l1-3.5L1 6h2.5z" fill="white"/>
+        <div className="flex items-center gap-2" role="status" aria-live="polite">
+          <div className="w-7 h-7 rounded-lg bg-[var(--color-accent)] flex items-center justify-center">
+            <svg width="26" height="26" viewBox="1 3 13 11" fill="none" aria-hidden="true">
+              <path d="M2 9C2 6.5 4.5 5 7.5 5s5.5 1.5 5.5 4-2.5 3.5-5.5 3.5S2 11.5 2 9z" stroke="#f5f2ee" strokeWidth="1.4"/>
+              <circle className="pea-1" cx="5" cy="9" r="1.2" fill="#f5f2ee"/>
+              <circle className="pea-2" cx="7.5" cy="8.5" r="1.2" fill="#f5f2ee"/>
+              <circle className="pea-3" cx="10" cy="9" r="1.2" fill="#f5f2ee"/>
             </svg>
           </div>
-          <span className="text-[12px] font-medium text-[var(--color-slate-400)]">
-            Loading SpeciaList…
+          <span className="font-logo font-semibold text-[22px] tracking-tight uppercase" style={{ color: 'var(--color-logo-wordmark)' }}>
+            Peasy
           </span>
         </div>
       </div>

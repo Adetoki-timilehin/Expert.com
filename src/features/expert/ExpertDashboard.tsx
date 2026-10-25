@@ -10,7 +10,7 @@ function getCategoryId(): CategoryId {
   const expertCategory = localStorage.getItem('specialist.expert.category')
   if (expertCategory === 'plumber') return 'plumber'
   const clientCategory = localStorage.getItem('specialist.client.category')
-  return clientCategory === 'plumber' ? 'plumber' : 'nanny'
+  return clientCategory === 'plumber' ? 'plumber' : 'legal'
 }
 
 export default function ExpertDashboard() {

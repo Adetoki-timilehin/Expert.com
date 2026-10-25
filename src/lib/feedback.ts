@@ -35,7 +35,7 @@ export function resetJourneyState() {
 
 export function downloadFeedbackResponses() {
   const payload = {
-    product: 'SpeciaList Validation MVP',
+    product: 'Peasy Validation MVP',
     exportedAt: new Date().toISOString(),
     responses: getFeedbackResponses(),
   }

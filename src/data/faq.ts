@@ -18,8 +18,8 @@ export const faqCategories: FaqCategory[] = [
 export const faqItems: FaqItem[] = [
   {
     category: 'General',
-    question: 'What is SpeciaList?',
-    answer: 'SpeciaList is a marketplace for focused consultations with category-appropriate Experts. Clients describe what they need, review the price and information being shared, then connect through a secure consultation workspace.',
+    question: 'What is Peasy?',
+    answer: 'Peasy is a marketplace for focused consultations with category-appropriate Experts. Clients describe what they need, review the price and information being shared, then connect through a secure consultation workspace.',
   },
   {
     category: 'General',
@@ -29,7 +29,7 @@ export const faqItems: FaqItem[] = [
   {
     category: 'General',
     question: 'Can one person use both Client and Expert modes?',
-    answer: 'Yes. The intended account model supports both roles. In this prototype, Home returns to role selection so you can switch between the two experiences immediately.',
+    answer: 'Yes. The intended account model supports both roles. In this prototype, use the role selection screen at the start to switch between the Client and Expert experiences.',
   },
   {
     category: 'Clients',
@@ -39,7 +39,7 @@ export const faqItems: FaqItem[] = [
   {
     category: 'Clients',
     question: 'When am I charged?',
-    answer: 'The proposed MVP model authorises £25 when a request is submitted and captures it only when an Expert accepts. If no eligible Expert accepts, the authorisation is released. This prototype only simulates that lifecycle.',
+    answer: 'The proposed MVP model authorises the consultation fee when a request is submitted and captures it only when an Expert accepts. Fees vary by tier — from £12 for a Supervised Academy Candidate to £45 for a Senior Verified Professional. If no eligible Expert accepts, the authorisation is released. This prototype only simulates that lifecycle.',
   },
   {
     category: 'Clients',
@@ -58,8 +58,8 @@ export const faqItems: FaqItem[] = [
   },
   {
     category: 'Clients',
-    question: 'Is SpeciaList an emergency service?',
-    answer: 'No. SpeciaList can help clarify next steps, but it does not replace emergency services. Immediate danger, electrical risk, gas leaks, safeguarding concerns or medical emergencies must be escalated to the appropriate emergency or regulated service.',
+    question: 'Is Peasy an emergency service?',
+    answer: 'No. Peasy can help clarify next steps, but it does not replace emergency services. Immediate danger, electrical risk, gas leaks, safeguarding concerns or medical emergencies must be escalated to the appropriate emergency or regulated service.',
   },
   {
     category: 'Experts',
@@ -74,7 +74,7 @@ export const faqItems: FaqItem[] = [
   {
     category: 'Experts',
     question: 'How are Expert payouts calculated?',
-    answer: 'For the initial £25 consultation, the prototype shows a £17.50 Expert payout and £7.50 covering platform costs and VAT. Before a real pilot, the legal, tax and marketplace model will be reviewed and the exact breakdown shown before an Expert accepts.',
+    answer: 'Payouts vary by tier. For a £25 Verified Professional consultation the prototype shows a £17.50 Expert payout and £7.50 covering platform costs and VAT. Before a real pilot, the legal, tax and marketplace model will be reviewed and the exact breakdown shown to Experts before they accept.',
   },
   {
     category: 'Experts',
@@ -94,12 +94,12 @@ export const faqItems: FaqItem[] = [
   {
     category: 'Academy',
     question: 'How is an Academy Expert identified to Clients?',
-    answer: 'The full label “Academy Expert” must appear on the profile, match explanation, price option, consultation header and receipt. It must also name the completed pathway and state that this is a SpeciaList training achievement rather than an external professional qualification. The label must never be shortened to “Verified Professional” or a vague “Certified Specialist.”',
+    answer: 'The full label “Academy Expert” must appear on the profile, match explanation, price option, consultation header and receipt. It must also name the completed pathway and state that this is a Peasy training achievement rather than an external professional qualification. The label must never be shortened to “Verified Professional” or a vague “Certified Specialist.”',
   },
   {
     category: 'Academy',
     question: 'Is an Academy Expert the same as a Verified Professional?',
-    answer: 'No. An Academy Expert completed an internal low-risk pathway, assessment, practical work and supervised consultations. A Verified Professional holds relevant external experience or qualifications that SpeciaList has reviewed. The two statuses use different labels and should never be visually merged.',
+    answer: 'No. An Academy Expert completed an internal low-risk pathway, assessment, practical work and supervised consultations. A Verified Professional holds relevant external experience or qualifications that Peasy has reviewed. The two statuses use different labels and should never be visually merged.',
   },
   {
     category: 'Academy',
@@ -123,18 +123,18 @@ export const faqItems: FaqItem[] = [
   },
   {
     category: 'Pricing',
-    question: 'How will SpeciaList decide prices?',
-    answer: 'The initial £25 price is a testable, transparent starting point for a focused text consultation. Pilot pricing should be informed by Client willingness to pay, Expert compensation, category complexity, duration, support costs, payment costs, VAT and sustainable marketplace economics.',
+    question: 'How will Peasy decide prices?',
+    answer: 'The current tier prices — £12 for a Supervised Candidate to £45 for a Senior Verified Professional — are testable starting points for a focused text consultation. Pilot pricing should be informed by Client willingness to pay, Expert compensation, category complexity, duration, support costs, payment costs, VAT and sustainable marketplace economics.',
   },
   {
     category: 'Pricing',
     question: 'Will every category cost £25?',
-    answer: 'Not necessarily. The MVP should keep one price while validating the core service. Later pricing may use clearly defined bands for duration, urgency or category complexity, but Clients should always see the total before authorising and Experts should see their payout before accepting.',
+    answer: 'No. Prices vary by the Expert\'s tier and verification level, from £12 for a Supervised Academy Candidate up to £45 for a Senior Verified Professional. Clients always see the full price before authorising and Experts see their payout before accepting.',
   },
   {
     category: 'Pricing',
     question: 'Will Experts bid against one another?',
-    answer: 'Not in the MVP. Competitive bidding can reduce trust and pressure Experts to accept unsuitable work. SpeciaList should start with transparent fixed pricing and category-specific eligibility.',
+    answer: 'Not in the MVP. Competitive bidding can reduce trust and pressure Experts to accept unsuitable work. Peasy should start with transparent fixed pricing and category-specific eligibility.',
   },
   {
     category: 'Pricing',

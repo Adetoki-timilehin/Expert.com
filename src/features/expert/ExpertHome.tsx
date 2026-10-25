@@ -14,12 +14,12 @@ export default function ExpertHome() {
           <div className="flex items-center justify-between pt-3 pb-8">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-[var(--color-accent)] flex items-center justify-center">
-                <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <path d="M7 1.5L9.5 6H12L8.5 9l1 3.5L7 10.5 3.5 12.5l1-3.5L1 6h2.5z" fill="white"/>
+                <svg width="26" height="26" viewBox="1 3 13 11" fill="none" aria-hidden="true">
+                  <path d="M2 9C2 6.5 4.5 5 7.5 5s5.5 1.5 5.5 4-2.5 3.5-5.5 3.5S2 11.5 2 9z" stroke="#f5f2ee" strokeWidth="1.4"/><circle cx="5" cy="9" r="1.2" fill="#f5f2ee"/><circle cx="7.5" cy="8.5" r="1.2" fill="#f5f2ee"/><circle cx="10" cy="9" r="1.2" fill="#f5f2ee"/>
                 </svg>
               </div>
-              <span className="font-logo text-[var(--color-slate-100)] font-semibold text-[16px] tracking-tight">
-                Specia<span className="text-[var(--color-accent-text)]">L</span>ist
+              <span className="font-logo font-semibold text-[22px] tracking-tight uppercase" style={{ color: 'var(--color-logo-wordmark)' }}>
+                Peasy
               </span>
             </div>
           </div>
@@ -72,7 +72,7 @@ export default function ExpertHome() {
               Want to build your expertise?
             </h2>
             <p className="text-[12px] leading-relaxed text-[var(--color-slate-400)]">
-              Eligible low-risk specialties will offer assessed learning and supervised experience through SpeciaList Academy.
+              Eligible low-risk specialties will offer assessed learning and supervised experience through Peasy Academy.
             </p>
             <span className="inline-flex items-center gap-1 mt-4 text-[11px] font-semibold text-[var(--color-accent-text)]">
               Explore Academy

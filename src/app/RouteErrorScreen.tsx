@@ -5,7 +5,7 @@ export default function RouteErrorScreen() {
   const navigate = useNavigate()
   const error = useRouteError()
 
-  console.error('SpeciaList route error', error)
+  console.error('Peasy route error', error)
 
   return (
     <AppShell statusLabel="Recovery">

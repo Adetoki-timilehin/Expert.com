@@ -5,7 +5,7 @@ import FeedbackPrompt from '../../components/feedback/FeedbackPrompt'
 import { categories } from '../../data/categories'
 
 type ApplicationStep = 'category' | 'evidence' | 'profile' | 'review' | 'submitted'
-type ExpertApplicationCategory = 'nanny' | 'plumber'
+type ExpertApplicationCategory = 'plumber'
 
 type Requirement = {
   title: string
@@ -14,13 +14,6 @@ type Requirement = {
 }
 
 const requirements: Record<ExpertApplicationCategory, Requirement[]> = {
-  nanny: [
-    { title: 'Identity check', detail: 'Government-issued photo identification' },
-    { title: 'Enhanced DBS', detail: 'Current certificate or Update Service status' },
-    { title: 'Paediatric first aid', detail: 'Current accredited certificate' },
-    { title: 'Safeguarding training', detail: 'Completed within the past three years' },
-    { title: 'Professional references', detail: 'Two recent childcare references' },
-  ],
   plumber: [
     { title: 'Identity and business check', detail: 'Photo identification and trading details' },
     { title: 'Public liability insurance', detail: 'Current policy evidence' },
@@ -41,7 +34,7 @@ export default function ExpertApplication() {
   const navigate = useNavigate()
   const [step, setStep] = useState<ApplicationStep>(getInitialStep)
   const [categoryId, setCategoryId] = useState<ExpertApplicationCategory>(() =>
-    localStorage.getItem('specialist.expert.category') === 'plumber' ? 'plumber' : 'nanny'
+    'plumber'
   )
   const [completedEvidence, setCompletedEvidence] = useState<string[]>(() => {
     try {
@@ -81,12 +74,8 @@ export default function ExpertApplication() {
   function selectCategory(nextCategory: ExpertApplicationCategory) {
     setCategoryId(nextCategory)
     setCompletedEvidence([])
-    setTitle(nextCategory === 'nanny' ? 'Childcare & Nanny Specialist' : 'Emergency Plumbing Specialist')
-    setBio(
-      nextCategory === 'nanny'
-        ? 'Experienced childcare professional focused on safe, dependable support for families.'
-        : 'Experienced plumbing professional providing clear guidance for urgent household issues.'
-    )
+    setTitle('Emergency Plumbing Specialist')
+    setBio('Experienced plumbing professional providing clear guidance for urgent household issues.')
   }
 
   function toggleEvidence(title: string) {
@@ -216,7 +205,7 @@ function CategoryStep({
         body="Your category determines the evidence we review and the requests you can receive."
       />
       <div className="space-y-3 mb-7">
-        {(['nanny', 'plumber'] as ExpertApplicationCategory[]).map((id) => {
+        {(['plumber'] as ExpertApplicationCategory[]).map((id) => {
           const item = categories[id]
           const active = selected === id
           return (

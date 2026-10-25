@@ -12,7 +12,6 @@ export type ClassificationResult = {
 
 const categoryTerms: Record<CategoryId, string[]> = {
   plumber: ['pipe', 'leak', 'water', 'plumber', 'stopcock', 'tap', 'drain', 'toilet', 'boiler', 'gas'],
-  nanny: ['nanny', 'childcare', 'babysitter', 'children', 'child', 'dbs', 'school run', 'toddler'],
   medical: ['doctor', 'medical', 'symptom', 'headache', 'migraine', 'medication', 'health', 'pain', 'gp', 'suicide', 'self harm'],
   legal: ['legal', 'solicitor', 'employer', 'contract', 'tenancy', 'landlord', 'dismissal', 'rights'],
   beauty: ['skincare', 'skin', 'beauty', 'facial', 'moisturiser', 'acne', 'routine', 'cosmetic'],

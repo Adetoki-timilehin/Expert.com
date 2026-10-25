@@ -1,6 +1,6 @@
 import type { CategoryId } from './categories'
 
-export type BroadCategoryId = 'home' | 'care' | 'health' | 'legal' | 'beauty' | 'career'
+export type BroadCategoryId = 'home' | 'health' | 'legal' | 'beauty' | 'career'
 
 export type BroadCategory = {
   id: BroadCategoryId
@@ -36,17 +36,6 @@ export const broadCategories: BroadCategory[] = [
       specialist: 'Verified emergency plumber',
     },
     plannedServices: ['Heating engineer', 'Electrician', 'Locksmith'],
-  },
-  {
-    id: 'care',
-    name: 'Family & care',
-    description: 'Trusted support for children and families',
-    availableService: {
-      categoryId: 'nanny',
-      name: 'Childcare and nannies',
-      specialist: 'DBS-checked nanny specialist',
-    },
-    plannedServices: ['Maternity nurse', 'SEN support', 'Elder care'],
   },
   {
     id: 'health',

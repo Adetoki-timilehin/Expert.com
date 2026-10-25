@@ -22,7 +22,7 @@ const scenarios: Scenario[] = [
     id: 'client',
     title: 'Find expert help',
     duration: '5–7 min',
-    task: 'You need a vetted nanny for two children in Clapham, starting in three weeks. Find suitable help and complete the consultation.',
+    task: 'Your employer has proposed a change to your contract. Find a legal expert, get guidance on your rights and complete the consultation.',
     observe: ['Role selection', 'Request clarity', '£25 pricing comprehension', 'Trust in the match', 'Usefulness of the outcome'],
     path: '/client',
   },
@@ -30,7 +30,7 @@ const scenarios: Scenario[] = [
     id: 'expert',
     title: 'Join as an expert',
     duration: '6–8 min',
-    task: 'You are an experienced nanny with current DBS and first-aid evidence. Apply, then preview how an approved Expert handles a request.',
+    task: 'You are an experienced plumber with public liability insurance. Apply, then preview how an approved Expert handles a request.',
     observe: ['Verification burden', 'Profile setup', 'Scope confidence', 'Payout clarity', 'Request acceptance'],
     path: '/expert',
   },
@@ -52,7 +52,7 @@ export default function TestingHub() {
     resetJourneyState()
     localStorage.setItem('specialist.role', scenario.id === 'client' ? 'client' : 'expert')
     if (scenario.id === 'client' || scenario.id === 'expert') {
-      localStorage.setItem('specialist.client.category', 'nanny')
+      localStorage.setItem('specialist.client.category', 'legal')
     }
     navigate(scenario.path)
   }

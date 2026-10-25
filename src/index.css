@@ -1,10 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'Pusab';
+  src: url('/fonts/pusab.otf') format('opentype');
+  font-display: swap;
+}
+
 @theme {
   --font-display: 'Manrope', system-ui, sans-serif;
   --font-body: 'Manrope', system-ui, sans-serif;
-  --font-logo: 'Inter', system-ui, sans-serif;
+  --font-logo: 'Pusab', 'Inter', system-ui, sans-serif;
+  --color-logo-wordmark: #f5f2ee;
 
   /* ── 60% Dominant ground ─────────────────────────────── */
   --color-ground-deep:   #07101a;   /* page shell */
@@ -34,6 +41,7 @@
 
 .theme-shell[data-theme='light'] {
   /* The same 60-30-10 hierarchy, translated to a warm, premium daylight palette. */
+  --color-logo-wordmark: var(--color-accent);
   --color-ground-deep:   #e7edf1;
   --color-ground-base:   #f8fafb;
   --color-slate-900:     #ffffff;
@@ -131,3 +139,11 @@ input::placeholder {
 .dot-1 { animation: pulse-dot 1.4s ease-in-out 0s infinite; }
 .dot-2 { animation: pulse-dot 1.4s ease-in-out 0.2s infinite; }
 .dot-3 { animation: pulse-dot 1.4s ease-in-out 0.4s infinite; }
+
+@keyframes pea-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-1.5px); }
+}
+.pea-1 { animation: pea-bounce 1.2s ease-in-out 0s infinite; }
+.pea-2 { animation: pea-bounce 1.2s ease-in-out 0.2s infinite; }
+.pea-3 { animation: pea-bounce 1.2s ease-in-out 0.4s infinite; }

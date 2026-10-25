@@ -1,4 +1,4 @@
-export type CategoryId = 'nanny' | 'plumber' | 'medical' | 'legal' | 'beauty' | 'career-application'
+export type CategoryId = 'plumber' | 'medical' | 'legal' | 'beauty' | 'career-application'
 
 export type CategoryDefinition = {
   id: CategoryId
@@ -33,40 +33,6 @@ export type CategoryDefinition = {
 }
 
 export const categories: Record<CategoryId, CategoryDefinition> = {
-  nanny: {
-    id: 'nanny',
-    name: 'Childcare & Nannies',
-    shortName: 'Vetted nanny',
-    cardTitle: 'Book a vetted nanny',
-    cardSubtitle: 'DBS checked · Insured',
-    landingQuery: "I'm looking for a vetted, experienced nanny for two children aged 3 and 6, weekday mornings in London.",
-    defaultUrgency: 'This week',
-    intakeLabel: 'DBS-checked childcare specialist',
-    attachmentPrompt: 'Add CV, references or DBS certificate',
-    matchingNoun: 'vetted nannies',
-    matchingDescription: 'Matching you with a vetted, DBS-checked UK nanny specialist.',
-    includedExpert: 'Matched to a verified UK childcare specialist',
-    matchReason: 'Sophie matches your Clapham location, weekday-morning schedule and requirement for current DBS and first-aid evidence.',
-    verificationItems: ['Enhanced DBS reviewed', 'Paediatric first aid current', 'Identity and references checked'],
-    consultationSummary: 'Sophie confirmed weekday-morning availability in Clapham and meets the requested DBS, first-aid and experience requirements. She recommends a short meet-and-greet before confirming the placement.',
-    nextSteps: [
-      'Confirm whether the role is sole charge or shared care',
-      'Clarify the school drop-off requirements',
-      'Arrange a meet-and-greet with both children',
-    ],
-    expert: {
-      name: 'Sophie Hargreaves',
-      firstName: 'Sophie',
-      title: 'Nanny Specialist',
-      credentials: 'DBS Enhanced · First Aid · 9 yrs',
-      location: 'London, UK',
-      rating: '4.97',
-      reviewCount: '348 reviews',
-      image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&h=160&fit=crop&auto=format',
-      clientMessage: "Hi Sophie — I'm looking for a nanny for my two children, aged 3 and 6. Weekday mornings in Clapham, starting in about three weeks. DBS and first aid essential. Do you have availability?",
-      expertMessage: "Hello! Lovely to connect with you. I do have weekday morning availability and I'm based in Clapham, so that works perfectly.\n\nI hold an enhanced DBS certificate (renewed March 2024) and a valid Paediatric First Aid qualification. I've worked with toddlers and school-age children for nine years, so the 3 and 6 age gap is very familiar territory.\n\nA couple of questions to help me understand the role: are you looking for sole charge or do you work from home during the mornings? And would you like me to handle school drop-off for the 6-year-old, or does that fall outside the 1pm finish?\n\nHappy to arrange a meet-and-greet at a time that suits you — no obligation.",
-    },
-  },
   plumber: {
     id: 'plumber',
     name: 'Emergency Plumbing',
@@ -150,24 +116,24 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     matchingNoun: 'employment-law professionals',
     matchingDescription: 'Matching you with a UK legal professional for initial employment-law guidance.',
     includedExpert: 'Matched to a verified UK legal professional',
-    matchReason: 'Oliver specialises in employment matters and has experience explaining contract changes and practical escalation options.',
+    matchReason: 'Jordan specialises in employment matters and has experience explaining contract changes and practical escalation options.',
     verificationItems: ['Identity and practising status checked', 'Employment-law experience reviewed', 'Professional indemnity confirmed'],
-    consultationSummary: 'Oliver recommended requesting the proposed change in writing, checking the variation and consultation clauses, and avoiding agreement until the practical and contractual impact is clear.',
+    consultationSummary: 'Jordan recommended requesting the proposed change in writing, checking the variation and consultation clauses, and avoiding agreement until the practical and contractual impact is clear.',
     nextSteps: [
       'Request the full proposal and effective date in writing',
       'Review the variation and consultation clauses',
       'Seek formal advice promptly if dismissal or a short deadline is mentioned',
     ],
     expert: {
-      name: 'Oliver Grant',
-      firstName: 'Oliver',
+      name: 'Jordan Adetoki',
+      firstName: 'Jordan',
       title: 'Employment Law Solicitor',
       credentials: 'Practising solicitor · Employment · 10 yrs',
       location: 'London, UK',
       rating: '4.95',
       reviewCount: '164 reviews',
-      image: 'https://images.unsplash.com/photo-1604771968376-e6f1f321be5d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBVSyUyMGxhd3llciUyMHBvcnRyYWl0JTIwaGVhZHNob3QlMjBvZmZpY2V8ZW58MXx8fHwxNzkxODgyMTQwfDA&ixlib=rb-4.1.0&q=80&w=1080',
-      clientMessage: 'Hi Oliver — my employer has proposed changing my contract. I want to understand what I should ask before responding and when I might need formal advice.',
+      image: '/experts/jordan-adetoki.jpg',
+      clientMessage: 'Hi Jordan — my employer has proposed changing my contract. I want to understand what I should ask before responding and when I might need formal advice.',
       expertMessage: 'Hello — I can help you identify the key questions and next steps, although this initial consultation does not create formal legal representation.\n\nAsk for the complete proposed change, business reason, consultation process and effective date in writing. Check whether your existing contract contains a variation clause and whether the change affects pay, hours, location or responsibilities.\n\nDo not assume silence means consent. If dismissal, redundancy or a very short response deadline is mentioned, obtain formal advice promptly because employment time limits can be strict.',
     },
   },
@@ -219,7 +185,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
     matchingNoun: 'career specialists',
     matchingDescription: 'Matching you with a career application specialist for CV and interview guidance.',
     includedExpert: 'Matched to a trained career application specialist',
-    matchReason: 'Jordan has completed the SpeciaList Academy Career Application pathway and has reviewed over 80 CVs and applications in this category.',
+    matchReason: 'Jordan has completed the Peasy Academy Career Application pathway and has reviewed over 80 CVs and applications in this category.',
     verificationItems: [
       'Identity checked',
       'Career Application pathway completed',
@@ -242,7 +208,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
       reviewCount: '84 reviews',
       image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&h=160&fit=crop&auto=format',
       clientMessage: "Hi Jordan — I have a job application and interview coming up. I'd like help making my CV stand out and preparing for the likely interview questions.",
-      expertMessage: "Hi — great timing to prepare properly. I can help you sharpen your CV and build structured answers for the interview, and I've completed the SpeciaList Career Application pathway so this is the work I focus on.\n\nTo give you the most useful feedback, could you share the job description and your current CV? Even a draft is fine.\n\nOnce I've seen the role, I'll highlight the two or three changes that will have the most impact on the application, and we can run through the interview questions most likely to come up for this type of role.",
+      expertMessage: "Hi — great timing to prepare properly. I can help you sharpen your CV and build structured answers for the interview, and I've completed the Peasy Career Application pathway so this is the work I focus on.\n\nTo give you the most useful feedback, could you share the job description and your current CV? Even a draft is fine.\n\nOnce I've seen the role, I'll highlight the two or three changes that will have the most impact on the application, and we can run through the interview questions most likely to come up for this type of role.",
     },
   },
 }

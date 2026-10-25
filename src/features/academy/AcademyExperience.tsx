@@ -56,7 +56,7 @@ export default function AcademyExperience() {
   }
 
   return (
-    <AppShell statusLabel="SpeciaList Academy" onBack={goBack} onHome={() => navigate('/')}>
+    <AppShell statusLabel="Peasy Academy" onBack={goBack} onHome={() => navigate('/')}>
       <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8">
         {screen === 'overview' && <AcademyOverview onExplore={() => setScreen('pathway')}/>}
         {screen === 'pathway' && <PathwayDetail onStart={() => setScreen('lesson')}/>}
@@ -218,7 +218,7 @@ function PathwayDetail({ onStart }: { onStart: () => void }) {
           Academy Expert
         </span>
         <p className="text-[10px] leading-relaxed mt-2 text-[var(--color-slate-400)]">
-          Career Application pathway · Trained and assessed by SpeciaList · Not an external professional qualification
+          Career Application pathway · Trained and assessed by Peasy · Not an external professional qualification
         </p>
       </div>
 
