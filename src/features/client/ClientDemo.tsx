@@ -62,16 +62,25 @@ export default function ClientDemo() {
   const [chatReturnScreen, setChatReturnScreen] = useState<'match' | 'history'>(
     () => localStorage.getItem('specialist.client.chatReturn') === 'history' ? 'history' : 'match'
   )
-  const [callSlot, setCallSlot] = useState<CallSlot | null>(() => {
+  const [callSlots, setCallSlots] = useState<CallSlot[]>(() => {
     try {
-      const saved = localStorage.getItem('specialist.client.callSlot')
-      if (!saved) return null
-      const parsed = JSON.parse(saved)
-      parsed.date = new Date(parsed.date)
-      return parsed as CallSlot
-    } catch { return null }
+      const saved = localStorage.getItem('specialist.client.callSlots')
+      if (!saved) return []
+      const parsed: CallSlot[] = JSON.parse(saved)
+      return parsed.map((s) => ({ ...s, date: new Date(s.date) }))
+    } catch { return [] }
   })
+  const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
   const [callFromChat, setCallFromChat] = useState(false)
+
+  const now = new Date()
+  const upcomingSlots = callSlots
+    .filter((s) => s.date > now)
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+  const activeSlot =
+    callSlots.find((s) => s.id === activeSlotId) ??
+    upcomingSlots[0] ??
+    null
   const navigate = useNavigate()
   const category = getCategory(categoryId)
 
@@ -93,9 +102,8 @@ export default function ClientDemo() {
   }, [selectedTierId])
 
   useEffect(() => {
-    if (callSlot) localStorage.setItem('specialist.client.callSlot', JSON.stringify(callSlot))
-    else localStorage.removeItem('specialist.client.callSlot')
-  }, [callSlot])
+    localStorage.setItem('specialist.client.callSlots', JSON.stringify(callSlots))
+  }, [callSlots])
 
   function goBack() {
     if (screen === 'chat') {
@@ -208,25 +216,26 @@ export default function ClientDemo() {
             tierId={selectedTierId}
             fromChat={callFromChat}
             onSelect={(slot) => {
-              setCallSlot(slot)
+              setActiveSlotId(slot.id)
+              setCallSlots((prev) => [...prev.filter((s) => s.id !== slot.id), slot])
               setScreen('call-confirm')
             }}
           />
         )}
-        {screen === 'call-confirm' && callSlot && (
+        {screen === 'call-confirm' && activeSlot && (
           <CallConfirmScreen
             category={category}
             tierId={selectedTierId}
-            slot={callSlot}
+            slot={activeSlot}
             fromChat={callFromChat}
             onNext={() => setScreen('call-upcoming')}
           />
         )}
-        {screen === 'call-upcoming' && callSlot && (
+        {screen === 'call-upcoming' && activeSlot && (
           <CallUpcomingScreen
             category={category}
             tierId={selectedTierId}
-            slot={callSlot}
+            slot={activeSlot}
             onJoin={() => setScreen('call-active')}
           />
         )}
@@ -234,7 +243,13 @@ export default function ClientDemo() {
           <CallActiveScreen
             category={category}
             tierId={selectedTierId}
-            onComplete={() => setScreen('call-complete')}
+            onComplete={() => {
+              if (activeSlotId) {
+                setCallSlots((prev) => prev.filter((s) => s.id !== activeSlotId))
+                setActiveSlotId(null)
+              }
+              setScreen('call-complete')
+            }}
           />
         )}
         {screen === 'call-complete' && (
@@ -257,7 +272,7 @@ export default function ClientDemo() {
             category={category}
             tierId={selectedTierId}
             complete={consultationComplete}
-            callSlot={callSlot}
+            upcomingSlots={upcomingSlots}
             onOpen={() => {
               if (consultationComplete) {
                 setScreen('complete')
@@ -266,7 +281,7 @@ export default function ClientDemo() {
               setChatReturnScreen('history')
               setScreen('chat')
             }}
-            onViewCall={() => setScreen('call-upcoming')}
+            onViewCall={(slotId) => { setActiveSlotId(slotId); setScreen('call-upcoming') }}
             onNewRequest={() => setScreen('landing')}
           />
         )}
@@ -1799,7 +1814,7 @@ function ConsultationHistoryScreen({
   category,
   tierId,
   complete,
-  callSlot,
+  upcomingSlots,
   onOpen,
   onViewCall,
   onNewRequest,
@@ -1807,9 +1822,9 @@ function ConsultationHistoryScreen({
   category: CategoryDefinition
   tierId: ExpertTierId
   complete: boolean
-  callSlot: CallSlot | null
+  upcomingSlots: CallSlot[]
   onOpen: () => void
-  onViewCall: () => void
+  onViewCall: (slotId: string) => void
   onNewRequest: () => void
 }) {
   const expert = category.expert
@@ -1822,32 +1837,37 @@ function ConsultationHistoryScreen({
         <h2 className="font-display text-[30px] text-[var(--color-slate-100)]">Consultations</h2>
       </div>
 
-      {/* Upcoming call card */}
-      {callSlot && (
-        <button
-          type="button"
-          onClick={onViewCall}
-          className="w-full rounded-3xl p-5 border text-left mb-4"
-          style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)' }}
-        >
-          <span className="flex items-center justify-between mb-3">
-            <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--color-accent-text)]">
-              Upcoming call
-            </span>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M5 3l4 4-4 4" stroke="var(--color-accent-text)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </span>
-          <span className="flex items-center gap-3">
-            <img src={expert.image} alt="" className="w-10 h-10 rounded-xl object-cover"/>
-            <span className="min-w-0">
-              <span className="block text-[13px] font-semibold truncate text-[var(--color-slate-100)]">{expert.name}</span>
-              <span className="block text-[11px] mt-0.5 text-[var(--color-accent-text)]">
-                {callSlot.dayLabel} · {callSlot.timeLabel}
+      {/* Upcoming call cards */}
+      {upcomingSlots.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {upcomingSlots.map((slot) => (
+            <button
+              key={slot.id}
+              type="button"
+              onClick={() => onViewCall(slot.id)}
+              className="w-full rounded-3xl p-5 border text-left"
+              style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)' }}
+            >
+              <span className="flex items-center justify-between mb-3">
+                <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--color-accent-text)]">
+                  Upcoming call
+                </span>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M5 3l4 4-4 4" stroke="var(--color-accent-text)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </span>
-            </span>
-          </span>
-        </button>
+              <span className="flex items-center gap-3">
+                <img src={expert.image} alt="" className="w-10 h-10 rounded-xl object-cover"/>
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-semibold truncate text-[var(--color-slate-100)]">{expert.name}</span>
+                  <span className="block text-[11px] mt-0.5 text-[var(--color-accent-text)]">
+                    {slot.dayLabel} · {slot.timeLabel}
+                  </span>
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
       )}
 
       <div className="flex gap-2 mb-5 flex-wrap">
