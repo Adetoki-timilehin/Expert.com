@@ -2164,6 +2164,15 @@ function CallUpcomingScreen({
   onJoin: () => void
 }) {
   const expert = category.expert
+  const [now, setNow] = useState(() => new Date())
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000)
+    return () => clearInterval(t)
+  }, [])
+
+  const msUntil = slot.date.getTime() - now.getTime()
+  const canJoin = msUntil <= 5 * 60 * 1000 // within 5 min of start time
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
@@ -2214,19 +2223,39 @@ function CallUpcomingScreen({
 
       <div className="rounded-2xl px-4 py-3 mb-6 border" style={{ background: 'var(--color-slate-800)', borderColor: 'var(--color-slate-700)' }}>
         <p className="text-[11px] leading-relaxed" style={{ color: 'var(--color-slate-400)' }}>
-          You'll be notified 15 minutes before the call. Join from this screen when it's time.
+          {canJoin
+            ? 'Your expert is ready. Tap below to join.'
+            : "You'll be notified 15 minutes before the call. Join from this screen when it's time."}
         </p>
       </div>
 
-      <AccentBtn onClick={onJoin}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M4 3l9 5-9 5V3z" fill="white"/>
-        </svg>
-        Join call
-      </AccentBtn>
-      <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
-        Demo mode — join anytime
-      </p>
+      {canJoin ? (
+        <AccentBtn onClick={onJoin}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M4 3l9 5-9 5V3z" fill="white"/>
+          </svg>
+          Join call
+        </AccentBtn>
+      ) : (
+        <>
+          <button
+            type="button"
+            disabled
+            className="w-full py-4 rounded-2xl text-[15px] font-semibold opacity-40 cursor-not-allowed border"
+            style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)', color: 'var(--color-slate-400)' }}
+          >
+            Available {slot.dayLabel} at {slot.timeLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onJoin}
+            className="text-center text-[11px] mt-3 w-full"
+            style={{ color: 'var(--color-slate-600)' }}
+          >
+            Demo — join now
+          </button>
+        </>
+      )}
     </div>
   )
 }
