@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router'
 import AppShell from '../../components/layout/AppShell'
 import FeedbackPrompt from '../../components/feedback/FeedbackPrompt'
 import { categories, categoryIds, getCategory, type CategoryDefinition, type CategoryId } from '../../data/categories'
-import { broadCategories, getBroadCategoryForService, type BroadCategoryId } from '../../data/taxonomy'
 import { classifyRequest, type ClassificationResult } from '../../lib/classifyRequest'
 import { eligibleTiersFor, lowestPriceFor, recommendTierFor, tiers, type ExpertTierId, type TierDefinition } from '../../data/tiers'
 
@@ -239,6 +238,16 @@ function ProgressTrack({ total, done }: { total: number; done: number }) {
 
 // ─── Screen 1: Landing ────────────────────────────────────────────────────────
 
+const categoryGridLabel: Record<CategoryId, string> = {
+  plumber: 'Plumbing',
+  medical: 'Medical',
+  legal: 'Legal',
+  career: 'Career',
+  immigration: 'Immigration',
+  financial: 'Finance',
+  'mental-health': 'Mental health',
+}
+
 function LandingScreen({
   initialCategory,
   initialQuery,
@@ -252,18 +261,15 @@ function LandingScreen({
 }) {
   const [query, setQuery] = useState(initialQuery)
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>(initialCategory)
-  const [activeBroadCategory, setActiveBroadCategory] = useState<BroadCategoryId>(
-    () => getBroadCategoryForService(initialCategory).id
-  )
 
-  function selectCategory(category: CategoryId) {
-    setSelectedCategory(category)
-    setQuery(categories[category].landingQuery)
+  function selectCategory(id: CategoryId) {
+    setSelectedCategory(id)
+    setQuery(categories[id].landingQuery)
   }
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
-      {/* Hero intro */}
+      {/* Header */}
       <div className="mb-6 pt-2">
         <div className="flex items-center justify-between mb-4">
           <p className="text-[var(--color-slate-400)] text-[11px] font-semibold tracking-[0.14em] uppercase">
@@ -293,114 +299,79 @@ function LandingScreen({
         </div>
       </div>
 
-      {/* Broad categories and available specialist services */}
-      <div className="mb-6">
+      {/* Category grid — tap to select and pre-fill */}
+      <div className="mb-5">
         <p className="text-[10px] uppercase tracking-wide font-semibold mb-3 text-[var(--color-slate-400)]">
-          Browse by category
+          What do you need help with?
         </p>
-        <div className="flex gap-2 overflow-x-auto pb-3">
-          {broadCategories.map((broadCategory) => {
-            const active = activeBroadCategory === broadCategory.id
+        <div className="grid grid-cols-2 gap-2.5">
+          {categoryIds.map((id) => {
+            const selected = selectedCategory === id
             return (
               <button
-                key={broadCategory.id}
+                key={id}
                 type="button"
-                onClick={() => setActiveBroadCategory(broadCategory.id)}
-                aria-pressed={active}
-                className="w-32 min-h-24 flex-shrink-0 rounded-2xl p-3 border text-left transition-colors"
+                onClick={() => selectCategory(id)}
+                aria-pressed={selected}
+                className="rounded-2xl p-3 border text-left transition-colors flex items-center gap-2.5 min-h-[56px]"
                 style={{
-                  background: active ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
-                  borderColor: active ? 'var(--color-accent)' : 'var(--color-slate-700)',
+                  background: selected ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
+                  borderColor: selected ? 'var(--color-accent)' : 'var(--color-slate-700)',
                 }}
               >
-                <span className="w-8 h-8 rounded-lg flex items-center justify-center mb-2 bg-[var(--color-slate-800)]">
-                  <CategoryIcon category={broadCategory.availableService.categoryId}/>
+                <span
+                  className="w-8 h-8 flex-shrink-0 rounded-lg flex items-center justify-center"
+                  style={{ background: 'var(--color-slate-800)' }}
+                >
+                  <CategoryIcon category={id} />
                 </span>
-                <span className="block text-[11px] font-semibold leading-snug text-[var(--color-slate-100)]">
-                  {broadCategory.name}
+                <span className="text-[12px] font-semibold leading-snug text-[var(--color-slate-100)]">
+                  {categoryGridLabel[id]}
                 </span>
               </button>
             )
           })}
         </div>
-
-        {broadCategories
-          .filter((broadCategory) => broadCategory.id === activeBroadCategory)
-          .map((broadCategory) => {
-            const service = broadCategory.availableService
-            const selected = selectedCategory === service.categoryId
-            return (
-              <div key={broadCategory.id} className="rounded-3xl p-4 border bg-[var(--color-slate-900)] border-[var(--color-slate-700)]">
-                <p className="text-[10px] leading-relaxed mb-3 text-[var(--color-slate-400)]">
-                  {broadCategory.description}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => selectCategory(service.categoryId)}
-                  aria-pressed={selected}
-                  className="w-full rounded-2xl p-4 border text-left transition-colors"
-                  style={{
-                    background: selected ? 'var(--color-accent-soft)' : 'var(--color-ground-deep)',
-                    borderColor: selected ? 'var(--color-accent)' : 'var(--color-slate-700)',
-                  }}
-                >
-                  <span className="flex items-start justify-between gap-3">
-                    <span>
-                      <span className="block text-[13px] font-semibold text-[var(--color-slate-100)]">{service.name}</span>
-                      <span className="block text-[10px] mt-1 text-[var(--color-slate-400)]">{service.specialist}</span>
-                    </span>
-                    <span className="text-[10px] font-semibold text-[var(--color-accent-text)]">
-                      From £{lowestPriceFor(service.categoryId)}
-                    </span>
-                  </span>
-                </button>
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  <span className="text-[9px] uppercase tracking-wide mr-1 py-1 text-[var(--color-slate-600)]">Also planned</span>
-                  {broadCategory.plannedServices.map((plannedService) => (
-                    <span key={plannedService} className="rounded-full px-2 py-1 text-[9px] bg-[var(--color-slate-800)] text-[var(--color-slate-400)]">
-                      {plannedService}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
       </div>
 
-      {/* Search — the input is structural; the focus ring uses accent */}
-      <div className="mt-auto">
-        <div className="relative mb-3">
-          <textarea
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Describe your problem or question…"
-            maxLength={500}
-            rows={3}
-            className="w-full text-[var(--color-slate-100)] text-[14px] leading-[1.65] rounded-2xl px-4 pt-4 pb-4 resize-none outline-none transition-colors duration-200"
-            style={{
-              background: 'var(--color-ground-deep)',
-              border: '1px solid var(--color-slate-700)',
-            }}
-            onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--color-accent)')}
-            onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--color-slate-700)')}
-          />
-          <div className="absolute bottom-3 right-3 text-[11px]" style={{ color: 'var(--color-slate-600)' }}>
-            {query.length}/500
-          </div>
+      {/* Divider */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 h-px" style={{ background: 'var(--color-slate-800)' }} />
+        <span className="text-[10px] font-medium" style={{ color: 'var(--color-slate-600)' }}>or describe your problem</span>
+        <div className="flex-1 h-px" style={{ background: 'var(--color-slate-800)' }} />
+      </div>
+
+      {/* Text input */}
+      <div className="relative mb-3">
+        <textarea
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Describe your problem or question…"
+          maxLength={500}
+          rows={3}
+          className="w-full text-[var(--color-slate-100)] text-[14px] leading-[1.65] rounded-2xl px-4 pt-4 pb-4 resize-none outline-none transition-colors duration-200"
+          style={{
+            background: 'var(--color-ground-deep)',
+            border: '1px solid var(--color-slate-700)',
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--color-accent)')}
+          onBlur={(e) => (e.currentTarget.style.borderColor = 'var(--color-slate-700)')}
+        />
+        <div className="absolute bottom-3 right-3 text-[11px]" style={{ color: 'var(--color-slate-600)' }}>
+          {query.length}/500
         </div>
-
-        {/* Primary CTA — the 10% accent at its most prominent */}
-        <AccentBtn onClick={() => onNext(selectedCategory, query)} disabled={!query.trim()}>
-          Find an expert
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </AccentBtn>
-
-        <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
-          From £12 · No subscription required
-        </p>
       </div>
+
+      <AccentBtn onClick={() => onNext(selectedCategory, query)} disabled={!query.trim()}>
+        Find an expert
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </AccentBtn>
+
+      <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
+        From £12 · No subscription required
+      </p>
     </div>
   )
 }
