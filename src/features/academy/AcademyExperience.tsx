@@ -56,7 +56,7 @@ export default function AcademyExperience() {
   }
 
   return (
-    <AppShell statusLabel="Peasy Academy" onBack={goBack} onHome={() => navigate('/')}>
+    <AppShell statusLabel="Peasy Academy" onBack={goBack} onHome={() => navigate('/expert')}>
       <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8">
         {screen === 'overview' && <AcademyOverview onExplore={() => setScreen('pathway')}/>}
         {screen === 'pathway' && <PathwayDetail onStart={() => setScreen('lesson')}/>}

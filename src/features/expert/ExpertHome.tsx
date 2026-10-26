@@ -5,11 +5,7 @@ export default function ExpertHome() {
   const navigate = useNavigate()
 
   return (
-    <AppShell
-      statusLabel="Expert mode"
-      onBack={() => navigate('/')}
-      onHome={() => navigate('/')}
-    >
+    <AppShell>
       <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8">
           <div className="flex items-center justify-between pt-3 pb-8">
             <div className="flex items-center gap-2">

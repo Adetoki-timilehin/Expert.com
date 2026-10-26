@@ -90,7 +90,7 @@ export default function ExpertApplication() {
     <AppShell
       statusLabel="Expert application"
       onBack={goBack}
-      onHome={() => navigate('/')}
+      onHome={() => navigate('/expert')}
     >
       <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8">
         {step !== 'submitted' && (
@@ -157,7 +157,7 @@ export default function ExpertApplication() {
             categoryName={category.name}
             onExpertHome={() => navigate('/expert')}
             onApprovedPreview={() => navigate('/expert/dashboard')}
-            onRoleHome={() => navigate('/')}
+            onRoleHome={() => navigate('/expert')}
           />
         )}
       </main>

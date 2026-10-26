@@ -1080,7 +1080,7 @@ export default function ExpertDashboard() {
     if (screen === 'request-detail') { setScreen('requests'); return }
     if (screen === 'consultation') { setScreen('home'); return }
     if (screen === 'call-active') { setScreen('calls'); return }
-    navigate('/')
+    navigate('/expert')
   }
 
   function handleAcceptRequest() {
@@ -1137,7 +1137,7 @@ export default function ExpertDashboard() {
   }
 
   return (
-    <AppShell onHome={() => navigate('/')} onBack={handleBack}>
+    <AppShell onHome={() => navigate('/expert')} onBack={handleBack}>
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {showTabs && (
           <WorkspaceTabs

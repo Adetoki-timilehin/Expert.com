@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
 import AppShell from '../../components/layout/AppShell'
 import FeedbackPrompt from '../../components/feedback/FeedbackPrompt'
 import { categories, categoryIds, getCategory, type CategoryDefinition, type CategoryId } from '../../data/categories'
@@ -90,7 +89,6 @@ export default function ClientDemo() {
     callSlots.find((s) => s.id === activeSlotId) ??
     upcomingSlots[0] ??
     null
-  const navigate = useNavigate()
   const category = getCategory(categoryId)
 
   useEffect(() => {
@@ -137,9 +135,7 @@ export default function ClientDemo() {
     const previous = previousScreen[screen]
     if (previous) {
       setScreen(previous)
-      return
     }
-    navigate('/')
   }
 
   return (
