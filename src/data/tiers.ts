@@ -157,24 +157,23 @@ export function callPriceFor(tierId: ExpertTierId): number | null {
   return tiers[tierId].callPrice ?? null
 }
 
-// Recommend a tier based on classification signals
 export function recommendTierFor(
   categoryId: CategoryId,
-  complexity: 'low' | 'standard' | 'complex'
+  gravity: 'routine' | 'standard' | 'elevated'
 ): ExpertTierId {
   const eligible = eligibleTiersFor(categoryId)
   const ids = eligible.map((t) => t.id)
 
-  if (complexity === 'complex') {
+  if (gravity === 'elevated') {
     if (ids.includes('senior-verified-professional')) return 'senior-verified-professional'
-    if (ids.includes('verified-professional')) return 'verified-professional'
+    return ids[ids.length - 1] // highest available
   }
-  if (complexity === 'low') {
+  if (gravity === 'routine') {
     if (ids.includes('supervised-candidate')) return 'supervised-candidate'
     if (ids.includes('academy-expert')) return 'academy-expert'
   }
   // standard
-  if (ids.includes('academy-expert')) return 'academy-expert'
   if (ids.includes('verified-professional')) return 'verified-professional'
+  if (ids.includes('academy-expert')) return 'academy-expert'
   return ids[0]
 }

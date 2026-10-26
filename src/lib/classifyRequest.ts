@@ -1,9 +1,12 @@
 import type { CategoryId } from '../data/categories'
 
+export type Gravity = 'routine' | 'standard' | 'elevated'
+
 export type ClassificationResult = {
   categoryId: CategoryId
   confidence: number
   confidenceLabel: 'High confidence' | 'Needs confirmation' | 'More detail needed'
+  gravity: Gravity
   matchedTerms: string[]
   alternatives: CategoryId[]
   urgentSafetyFlag: boolean
@@ -18,6 +21,35 @@ const categoryTerms: Record<CategoryId, string[]> = {
   immigration: ['visa', 'immigration', 'passport', 'leave to remain', 'right to remain', 'citizenship', 'nationality', 'brp', 'biometric', 'skilled worker', 'student visa', 'tier 2', 'asylum', 'deportation', 'indefinite leave'],
   financial: ['tax', 'self assessment', 'hmrc', 'savings', 'isa', 'pension', 'debt', 'mortgage', 'budget', 'financial', 'money', 'income', 'expenses', 'self employed', 'national insurance', 'inheritance'],
   'mental-health': ['anxiety', 'depression', 'mental health', 'counselling', 'therapy', 'stress', 'overwhelmed', 'panic', 'trauma', 'grief', 'loneliness', 'sleep', 'mood', 'wellbeing', 'burnout', 'ptsd'],
+}
+
+// Categories where even a routine query warrants at least a verified professional
+const highStakesCategories = new Set<CategoryId>(['medical', 'legal', 'immigration', 'mental-health'])
+
+const elevatedGravityTerms = [
+  // urgency
+  'emergency', 'urgent', 'immediately', 'asap', 'right now', 'today', 'crisis',
+  // severity
+  'severe', 'serious', 'critical', 'significant', 'major', 'life-changing',
+  // legal/financial severity
+  'dismissal', 'dismissed', 'redundancy', 'court', 'lawsuit', 'tribunal', 'deportation',
+  'debt', 'bankruptcy', 'repossession', 'eviction',
+  // medical severity
+  'surgery', 'diagnosis', 'chronic', 'hospital', 'admitted',
+  // complexity markers
+  'years', 'ongoing', 'multiple', 'history', 'previous', 'complicated',
+]
+
+function assessGravity(query: string, categoryId: CategoryId, urgentSafetyFlag: boolean): Gravity {
+  if (urgentSafetyFlag) return 'elevated'
+
+  const normalized = query.toLowerCase()
+  const hasElevatedTerm = elevatedGravityTerms.some((t) => normalized.includes(t))
+  const isLong = query.length > 180
+
+  if (hasElevatedTerm || isLong) return 'elevated'
+  if (highStakesCategories.has(categoryId)) return 'standard'
+  return 'routine'
 }
 
 const urgentPatterns: { terms: string[]; message: string }[] = [
@@ -55,10 +87,12 @@ export function classifyRequest(
   const urgentMatch = urgentPatterns.find((pattern) =>
     pattern.terms.some((term) => normalized.includes(term))
   )
+  const gravity = assessGravity(request, best.categoryId, Boolean(urgentMatch))
 
   return {
     categoryId: best.categoryId,
     confidence,
+    gravity,
     confidenceLabel: confidence >= 0.85
       ? 'High confidence'
       : confidence >= 0.65

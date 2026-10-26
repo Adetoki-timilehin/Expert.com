@@ -937,8 +937,7 @@ function PricingScreen({
   const tier = tiers[tierId]
   const vatAmount = +(tier.price - tier.price / 1.2).toFixed(2)
   const platformFee = +(tier.price / 1.2 - tier.expertPayout).toFixed(2)
-  const complexity = classification.confidence >= 0.85 ? 'low' : classification.confidence >= 0.65 ? 'standard' : 'complex'
-  const recommendedId = recommendTierFor(categoryId, complexity)
+  const recommendedId = recommendTierFor(categoryId, classification.gravity)
   const eligible = eligibleTiersFor(categoryId)
 
   return (
