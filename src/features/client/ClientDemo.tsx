@@ -931,6 +931,100 @@ function IntakeScreen({
   )
 }
 
+// ─── Tier picker ──────────────────────────────────────────────────────────────
+
+function TierPicker({
+  eligible,
+  tierId,
+  recommendedId,
+  onSelect,
+}: {
+  eligible: TierDefinition[]
+  tierId: ExpertTierId
+  recommendedId: ExpertTierId
+  onSelect: (id: ExpertTierId) => void
+}) {
+  const [expandedId, setExpandedId] = useState<ExpertTierId | null>(null)
+
+  return (
+    <div className="border-t pt-4 px-4 pb-4 space-y-2" style={{ borderColor: 'var(--color-slate-800)' }}>
+      <p className="text-[10px] uppercase tracking-wide font-semibold mb-3" style={{ color: 'var(--color-slate-600)' }}>
+        Choose expert level
+      </p>
+      {eligible.map((t) => {
+        const isSelected = t.id === tierId
+        const isRecommended = t.id === recommendedId
+        const isExpanded = expandedId === t.id
+        return (
+          <div
+            key={t.id}
+            className="rounded-xl border overflow-hidden transition-colors"
+            style={{
+              background: isSelected ? 'var(--color-accent-soft)' : 'var(--color-slate-800)',
+              borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-slate-700)',
+            }}
+          >
+            {/* Main row — tap to select */}
+            <button
+              type="button"
+              onClick={() => onSelect(t.id)}
+              className="w-full p-3 text-left"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                    <TierBadge tierId={t.id} />
+                    {isRecommended && (
+                      <span className="text-[9px] font-semibold rounded-full px-1.5 py-0.5" style={{ background: 'var(--color-accent)', color: 'white' }}>
+                        Recommended
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[13px] font-semibold text-[var(--color-slate-100)] leading-snug">{t.name}</p>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-slate-400)' }}>{t.suitableFor}</p>
+                </div>
+                <span className="text-[15px] font-semibold flex-shrink-0 text-[var(--color-slate-100)] mt-0.5">£{t.price}</span>
+              </div>
+            </button>
+
+            {/* What's included toggle */}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : t.id) }}
+              className="w-full flex items-center justify-between px-3 py-2 border-t text-left"
+              style={{ borderColor: isSelected ? 'var(--color-accent-border)' : 'var(--color-slate-700)' }}
+            >
+              <span className="text-[11px] font-medium" style={{ color: 'var(--color-slate-400)' }}>
+                What's included
+              </span>
+              <svg
+                width="12" height="12" viewBox="0 0 12 12" fill="none"
+                className={`transition-transform duration-200 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
+              >
+                <path d="M2 4l4 4 4-4" stroke="var(--color-slate-400)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {isExpanded && (
+              <div className="px-3 pb-3 pt-1 space-y-1.5 border-t" style={{ borderColor: isSelected ? 'var(--color-accent-border)' : 'var(--color-slate-700)' }}>
+                <p className="text-[11px] leading-relaxed mb-2" style={{ color: 'var(--color-slate-400)' }}>{t.description}</p>
+                {t.details.map((d) => (
+                  <div key={d} className="flex items-start gap-2">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0 mt-0.5" aria-hidden="true">
+                      <path d="M2 5l2 2 4-4" stroke="var(--color-accent-text)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span className="text-[11px] leading-snug" style={{ color: 'var(--color-slate-200)' }}>{d}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── Screen 3: Pricing ────────────────────────────────────────────────────────
 
 function PricingScreen({
@@ -996,41 +1090,12 @@ function PricingScreen({
         </div>
 
         {showTierPicker && (
-          <div className="border-t px-4 pb-4 space-y-2" style={{ borderColor: 'var(--color-slate-800)' }}>
-            <p className="text-[10px] uppercase tracking-wide font-semibold pt-3 mb-3" style={{ color: 'var(--color-slate-600)' }}>
-              Choose Expert level
-            </p>
-            {eligible.map((t) => {
-              const isSelected = t.id === tierId
-              const isRecommended = t.id === recommendedId
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => { onTierChange(t.id); setShowTierPicker(false) }}
-                  className="w-full rounded-xl p-3 border text-left transition-colors"
-                  style={{
-                    background: isSelected ? 'var(--color-accent-soft)' : 'var(--color-slate-800)',
-                    borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-slate-700)',
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <TierBadge tierId={t.id} />
-                      <span className="text-[12px] font-semibold truncate text-[var(--color-slate-100)]">{t.name}</span>
-                      {isRecommended && (
-                        <span className="text-[9px] font-semibold rounded-full px-1.5 py-0.5 flex-shrink-0" style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent-text)' }}>
-                          Recommended
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[13px] font-semibold flex-shrink-0 text-[var(--color-slate-100)]">£{t.price}</span>
-                  </div>
-                  <p className="text-[10px] mt-1 leading-relaxed" style={{ color: 'var(--color-slate-400)' }}>{t.suitableFor}</p>
-                </button>
-              )
-            })}
-          </div>
+          <TierPicker
+            eligible={eligible}
+            tierId={tierId}
+            recommendedId={recommendedId}
+            onSelect={(id) => { onTierChange(id); setShowTierPicker(false) }}
+          />
         )}
       </div>
 
