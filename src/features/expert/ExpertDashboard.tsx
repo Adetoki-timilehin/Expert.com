@@ -21,16 +21,18 @@ export default function ExpertDashboard() {
   const [screen, setScreen] = useState<WorkspaceScreen>('dashboard')
   const [available, setAvailable] = useState(() => localStorage.getItem('specialist.expert.available') !== 'false')
   const [status, setStatus] = useState<ConsultationStatus>(() => {
-    const saved = localStorage.getItem('specialist.expert.consultationStatus')
-    return saved === 'active' || saved === 'completed' || saved === 'declined' ? saved : 'new'
+    // Derive from the shared consultation.status key so it resets when the client starts a new request
+    const shared = localStorage.getItem('specialist.consultation.status')
+    if (shared === 'completed') return 'completed'
+    if (shared === 'active') return 'active'
+    return 'new'
   })
   const category = categories[getCategoryId()]
   const requestText = localStorage.getItem('specialist.client.request') || category.landingQuery
 
   useEffect(() => {
     localStorage.setItem('specialist.expert.available', String(available))
-    localStorage.setItem('specialist.expert.consultationStatus', status)
-  }, [available, status])
+  }, [available])
 
   function goBack() {
     if (screen === 'dashboard') {

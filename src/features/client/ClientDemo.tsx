@@ -52,9 +52,18 @@ export default function ClientDemo() {
   const [classification, setClassification] = useState<ClassificationResult>(
     () => classifyRequest(requestText, categoryId)
   )
-  const [selectedTierId, setSelectedTierId] = useState<ExpertTierId>(
-    () => (localStorage.getItem('specialist.client.tier') as ExpertTierId | null) ?? 'verified-professional'
-  )
+  const [selectedTierId, setSelectedTierId] = useState<ExpertTierId>(() => {
+    const saved = localStorage.getItem('specialist.client.tier') as ExpertTierId | null
+    const savedScreen = localStorage.getItem('specialist.client.screen')
+    // Only restore saved tier if user is mid-flow (not starting fresh)
+    if (saved && savedScreen && savedScreen !== 'landing' && savedScreen !== 'intake') return saved
+    // Otherwise derive from the stored request so it's always coherent
+    const storedRequest = localStorage.getItem('specialist.client.request') || ''
+    const storedCategory = localStorage.getItem('specialist.client.category') as CategoryId | null
+    const catId: CategoryId = storedCategory && ['plumber','medical','legal','career','immigration','financial','mental-health'].includes(storedCategory) ? storedCategory : 'legal'
+    const result = classifyRequest(storedRequest, catId)
+    return recommendTierFor(result.categoryId, result.gravity)
+  })
   const [consultationComplete, setConsultationComplete] = useState(
     () => localStorage.getItem('specialist.client.consultationComplete') === 'true'
       || localStorage.getItem('specialist.consultation.status') === 'completed'
@@ -147,6 +156,11 @@ export default function ClientDemo() {
               setClassification(result)
               setCategoryId(result.categoryId)
               setSelectedTierId(recommendTierFor(result.categoryId, result.gravity))
+              // Clear per-consultation state so it doesn't bleed into the new flow
+              setConsultationComplete(false)
+              setChatReturnScreen('match')
+              localStorage.removeItem('specialist.client.consultationComplete')
+              localStorage.removeItem('specialist.consultation.status')
               setScreen('intake')
             }}
           />
