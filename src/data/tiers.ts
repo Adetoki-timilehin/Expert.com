@@ -64,13 +64,14 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
   },
   'verified-professional': {
     id: 'verified-professional',
-    extendsId: 'academy-expert',
     name: 'Verified Professional',
     price: 25,
     callPrice: 55,
     expertPayout: 17,
-    description: 'Holds external professional qualifications or significant industry experience, reviewed and verified by Peasy.',
+    description: 'Holds external professional qualifications or significant industry experience, reviewed and verified by Peasy. Not an Academy graduate.',
     details: [
+      'Identity verified',
+      'Works independently',
       'External credentials reviewed and verified',
       'Relevant professional experience confirmed',
       'Faster response time',
