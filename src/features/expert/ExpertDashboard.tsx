@@ -179,17 +179,21 @@ const HISTORY_ITEMS: HistoryItem[] = [
 
 // ─── AI draft content ─────────────────────────────────────────────────────────
 
-const INITIAL_DRAFT = `The key distinction here is that "at risk" is not a notice of termination — you remain employed. Under the Employment Rights Act 1996, your [replace with their exact years of continuous employment from the message above] gives you enhanced redundancy rights, and being the only person selected warrants scrutiny of the selection criteria being used.
+const INITIAL_DRAFT = `The key distinction here is that "at risk" is not a notice of termination — you remain employed. Under the Employment Rights Act 1996, your three years of continuous employment gives you enhanced redundancy rights, and being the only person selected for this conversation warrants scrutiny of the selection criteria being used.
 
-On your visa: the 60-day grace period only starts when employment formally ends — not now. With [replace with their specific timeline to permanent residence they mentioned], you have time to act carefully rather than reactively.
+On your visa: the 60-day grace period only starts when employment formally ends — not now. With permanent residence 18 months away, you have time to act carefully rather than reactively.
 
-My recommendation: [your specific professional advice for what they should do first — be concrete].`
+[your assessment of whether the facts as described suggest unfair selection, and what that realistically means for their position]
+
+My immediate recommendation: [your specific advice for what they should do in the next 24–48 hours].`
 
 const FOLLOW_UP_CLIENT = "That's really helpful. Should I put something in writing to my employer now, or wait until they formally give me notice?"
 
-const FOLLOW_UP_DRAFT = `I would advise against waiting passively. Send a written follow-up to [replace with the specific contact they mentioned — manager or HR] today, formally requesting written confirmation of what was discussed, the reason for the 'at risk' status, and the selection criteria being used.
+const FOLLOW_UP_DRAFT = `I would advise against waiting. Send a written follow-up to your manager today, formally requesting written confirmation of what was discussed, the reason for the 'at risk' status, and the selection criteria being used.
 
-This does two things: it starts your paper trail and it signals you are aware of your rights. [add your professional assessment of whether this client's situation warrants seeking independent legal advice at this stage].
+This starts your paper trail and signals you are aware of your rights — which often changes the tone of the process.
+
+[your professional opinion on whether this situation warrants seeking independent legal representation at this stage, and if so, what kind of solicitor they should look for]
 
 Do not resign under any circumstance — it would undermine any future claim.`
 
