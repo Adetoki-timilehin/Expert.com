@@ -1,168 +1,349 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import AppShell from '../../components/layout/AppShell'
-import { categories, type CategoryId } from '../../data/categories'
 
-type WorkspaceScreen = 'dashboard' | 'opportunity' | 'consultation' | 'earnings'
-type ConsultationStatus = 'new' | 'active' | 'completed' | 'declined'
+// ─── Types ──────────────────────────────────────────────────────────────────
 
-const validCategoryIds: CategoryId[] = ['plumber', 'medical', 'legal', 'career', 'immigration', 'financial', 'mental-health']
+type ExpertScreen =
+  | 'home'
+  | 'requests'
+  | 'request-detail'
+  | 'consultation'
+  | 'calls'
+  | 'call-active'
+  | 'history'
+  | 'profile'
 
-function getCategoryId(): CategoryId {
-  const expertCategory = localStorage.getItem('specialist.expert.category') as CategoryId | null
-  if (expertCategory && validCategoryIds.includes(expertCategory)) return expertCategory
-  const clientCategory = localStorage.getItem('specialist.client.category') as CategoryId | null
-  if (clientCategory && validCategoryIds.includes(clientCategory)) return clientCategory
-  return 'legal'
+type DummyRequest = {
+  id: string
+  category: string
+  categoryShort: string
+  query: string
+  tier: string
+  payout: number
+  receivedAgo: string
+  urgency: string
 }
 
-export default function ExpertDashboard() {
-  const navigate = useNavigate()
-  const [screen, setScreen] = useState<WorkspaceScreen>('dashboard')
-  const [available, setAvailable] = useState(() => localStorage.getItem('specialist.expert.available') !== 'false')
-  const [status, setStatus] = useState<ConsultationStatus>(() => {
-    // Derive from the shared consultation.status key so it resets when the client starts a new request
-    const shared = localStorage.getItem('specialist.consultation.status')
-    if (shared === 'completed') return 'completed'
-    if (shared === 'active') return 'active'
-    return 'new'
-  })
-  const category = categories[getCategoryId()]
-  const requestText = localStorage.getItem('specialist.client.request') || category.landingQuery
+type DummyCall = {
+  id: string
+  clientInitial: string
+  clientName: string
+  category: string
+  topic: string
+  day: string
+  time: string
+  duration: string
+  payout: number
+}
 
-  useEffect(() => {
-    localStorage.setItem('specialist.expert.available', String(available))
-  }, [available])
+type HistoryItem = {
+  id: string
+  category: string
+  querySnippet: string
+  payout: number
+  daysAgo: number
+  rating: number
+  review: string
+  format: 'Chat' | 'Call'
+}
 
-  function goBack() {
-    if (screen === 'dashboard') {
-      navigate('/expert')
-      return
-    }
-    setScreen('dashboard')
-  }
+type ChatMessage = { from: 'client' | 'expert'; text: string }
 
+// ─── Dummy data ──────────────────────────────────────────────────────────────
+
+const EXPERT = {
+  name: 'Alex Chen',
+  tier: 'Senior Verified Professional',
+  category: 'Legal & Immigration',
+  rating: 4.9,
+  consultations: 127,
+  responseTime: 'Under 2 min',
+  memberSince: 'March 2024',
+  monthEarnings: 423.00,
+  totalEarnings: 3841.00,
+}
+
+const INITIAL_REQUESTS: DummyRequest[] = [
+  {
+    id: 'req-1',
+    category: 'Immigration',
+    categoryShort: 'Immigration',
+    query: "I'm on a Skilled Worker visa and my employer is threatening to terminate my contract. I need to understand whether losing this job would affect my visa status and what my options are — I've been here three years and have permanent residence in 18 months.",
+    tier: 'Senior Verified Professional',
+    payout: 32,
+    receivedAgo: '6 min ago',
+    urgency: 'Elevated',
+  },
+  {
+    id: 'req-2',
+    category: 'Legal',
+    categoryShort: 'Legal',
+    query: "My landlord is trying to evict me with only two weeks' notice. I've been renting for four years and have always paid on time. I don't think this is legal — I'd like to understand what my rights are before I respond.",
+    tier: 'Verified Professional',
+    payout: 17,
+    receivedAgo: '14 min ago',
+    urgency: 'Standard',
+  },
+  {
+    id: 'req-3',
+    category: 'Legal',
+    categoryShort: 'Legal',
+    query: "I was dismissed from my job last Friday after raising a concern about a colleague. I'd been there for six years. I believe it was unfair dismissal and possibly retaliation. Want to understand whether I have a case before speaking to anyone.",
+    tier: 'Senior Verified Professional',
+    payout: 32,
+    receivedAgo: '21 min ago',
+    urgency: 'Elevated',
+  },
+]
+
+const DUMMY_CALLS: DummyCall[] = [
+  {
+    id: 'call-1',
+    clientInitial: 'S',
+    clientName: 'Sarah M.',
+    category: 'Legal',
+    topic: 'Employment tribunal preparation',
+    day: 'Tomorrow',
+    time: '2:30 PM',
+    duration: '45 min',
+    payout: 90,
+  },
+  {
+    id: 'call-2',
+    clientInitial: 'J',
+    clientName: 'James K.',
+    category: 'Immigration',
+    topic: 'Skilled Worker visa review',
+    day: 'Thursday',
+    time: '11:00 AM',
+    duration: '30 min',
+    payout: 90,
+  },
+]
+
+const HISTORY_ITEMS: HistoryItem[] = [
+  {
+    id: 'h-1',
+    category: 'Legal',
+    querySnippet: 'Employment contract dispute after role change',
+    payout: 32,
+    daysAgo: 4,
+    rating: 5,
+    review: 'Explained the situation clearly and helped me understand my options before I responded to my employer.',
+    format: 'Chat',
+  },
+  {
+    id: 'h-2',
+    category: 'Immigration',
+    querySnippet: 'Skilled Worker visa renewal — change of employer',
+    payout: 32,
+    daysAgo: 9,
+    rating: 5,
+    review: 'Extremely knowledgeable. Gave me exactly the guidance I needed and flagged a detail I had missed entirely.',
+    format: 'Call',
+  },
+  {
+    id: 'h-3',
+    category: 'Legal',
+    querySnippet: 'Tenancy deposit — landlord refusing to return',
+    payout: 17,
+    daysAgo: 14,
+    rating: 4,
+    review: 'Good advice, responded promptly. Outlined the process well.',
+    format: 'Chat',
+  },
+  {
+    id: 'h-4',
+    category: 'Legal',
+    querySnippet: 'Redundancy notice — rights and entitlements',
+    payout: 32,
+    daysAgo: 21,
+    rating: 5,
+    review: 'Clear and professional. Understood my situation quickly and gave very practical next steps.',
+    format: 'Chat',
+  },
+  {
+    id: 'h-5',
+    category: 'Immigration',
+    querySnippet: 'Leave to remain — application timeline query',
+    payout: 17,
+    daysAgo: 30,
+    rating: 5,
+    review: 'Very thorough. Addressed all my concerns and gave me confidence going into the application.',
+    format: 'Chat',
+  },
+]
+
+const INITIAL_CHAT: ChatMessage[] = [
+  {
+    from: 'client',
+    text: "I'm on a Skilled Worker visa and my employer is threatening to terminate my contract. I need to understand whether losing this job would affect my visa status and what my options are — I've been here three years and have permanent residence in 18 months.",
+  },
+  {
+    from: 'expert',
+    text: "Thank you for getting in touch. This is an important situation and I want to make sure I understand it fully before giving you any guidance.",
+  },
+  {
+    from: 'expert',
+    text: "A few questions to start: has your employer given you formal written notice of termination, or is this currently verbal? And is the threat linked to any specific reason — redundancy, performance, or something else?",
+  },
+  {
+    from: 'client',
+    text: "It's been verbal so far — my manager told me in a meeting yesterday that my position is 'at risk'. Nothing in writing yet. They mentioned budget cuts but I'm the only person in my team being told this.",
+  },
+  {
+    from: 'expert',
+    text: "That distinction matters here. 'At risk' is not the same as a termination notice — you are still employed and have not yet been formally dismissed. That gives you important options.",
+  },
+  {
+    from: 'expert',
+    text: "On the visa side: your Skilled Worker visa is tied to your current sponsor, so if your employment ends you would normally need to either find a new sponsor within 60 days or leave the UK. However, that clock only starts once employment actually ends — not when you're placed 'at risk'.",
+  },
+]
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function Stars({ rating, size = 12 }: { rating: number; size?: number }) {
   return (
-    <AppShell statusLabel="Verified Expert" onBack={goBack} onHome={() => navigate('/')}>
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        {screen !== 'consultation' && (
-          <WorkspaceTabs current={screen} onSelect={setScreen}/>
-        )}
-        {screen === 'dashboard' && (
-          <Dashboard
-            categoryId={category.id}
-            available={available}
-            status={status}
-            requestText={requestText}
-            onAvailabilityChange={setAvailable}
-            onOpportunity={() => setScreen('opportunity')}
-            onConsultation={() => setScreen('consultation')}
-            onEarnings={() => setScreen('earnings')}
-            onReset={() => setStatus('new')}
+    <span className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <svg key={n} width={size} height={size} viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path
+            d="M6 1l1.2 3.7H11L8.1 6.9l1.1 3.6L6 8.4 2.8 10.5l1.1-3.6L1 4.7h3.8z"
+            fill={n <= rating ? 'var(--color-accent)' : 'var(--color-slate-700)'}
           />
-        )}
-        {screen === 'opportunity' && (
-          <Opportunity
-            categoryId={category.id}
-            status={status}
-            requestText={requestText}
-            onAccept={() => {
-              setStatus('active')
-              localStorage.setItem('specialist.consultation.status', 'active')
-              setScreen('consultation')
-            }}
-            onDecline={() => {
-              setStatus('declined')
-              setScreen('dashboard')
-            }}
-          />
-        )}
-        {screen === 'consultation' && (
-          <ExpertConsultation
-            categoryId={category.id}
-            requestText={requestText}
-            onBack={() => setScreen('dashboard')}
-            onComplete={() => {
-              setStatus('completed')
-              localStorage.setItem('specialist.consultation.status', 'completed')
-              localStorage.setItem('specialist.client.consultationComplete', 'true')
-              setScreen('earnings')
-            }}
-          />
-        )}
-        {screen === 'earnings' && <Earnings status={status}/>}
-      </main>
-    </AppShell>
+        </svg>
+      ))}
+    </span>
   )
 }
 
+function CategoryBadge({ label }: { label: string }) {
+  return (
+    <span
+      className="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold"
+      style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent-text)' }}
+    >
+      {label}
+    </span>
+  )
+}
+
+function UrgencyBadge({ level }: { level: string }) {
+  const elevated = level === 'Elevated'
+  return (
+    <span
+      className="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold"
+      style={{
+        background: elevated ? 'rgba(180,60,40,0.12)' : 'var(--color-slate-800)',
+        color: elevated ? '#c0472e' : 'var(--color-slate-400)',
+      }}
+    >
+      {level}
+    </span>
+  )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>{label}</span>
+      <span className="text-[11px] font-semibold text-right" style={{ color: 'var(--color-slate-200)' }}>{value}</span>
+    </div>
+  )
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+
+const TAB_SCREENS: ExpertScreen[] = ['home', 'requests', 'calls', 'history', 'profile']
+
 function WorkspaceTabs({
   current,
+  pendingCount,
   onSelect,
 }: {
-  current: WorkspaceScreen
-  onSelect: (screen: WorkspaceScreen) => void
+  current: ExpertScreen
+  pendingCount: number
+  onSelect: (s: ExpertScreen) => void
 }) {
-  const tabs: { id: WorkspaceScreen; label: string }[] = [
-    { id: 'dashboard', label: 'Home' },
-    { id: 'opportunity', label: 'Requests' },
-    { id: 'earnings', label: 'Earnings' },
+  const tabs: { id: ExpertScreen; label: string }[] = [
+    { id: 'home', label: 'Home' },
+    { id: 'requests', label: 'Requests' },
+    { id: 'calls', label: 'Calls' },
+    { id: 'history', label: 'History' },
+    { id: 'profile', label: 'Profile' },
   ]
 
   return (
-    <nav className="flex gap-1 px-5 pb-2 flex-shrink-0" aria-label="Expert workspace">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => onSelect(tab.id)}
-          className="flex-1 min-h-9 rounded-xl text-[11px] font-semibold transition-colors"
-          style={{
-            color: current === tab.id ? 'var(--color-accent-text)' : 'var(--color-slate-400)',
-            background: current === tab.id ? 'var(--color-accent-soft)' : 'transparent',
-          }}
-        >
-          {tab.label}
-        </button>
-      ))}
+    <nav className="flex gap-1 px-4 pb-2 flex-shrink-0" aria-label="Expert workspace">
+      {tabs.map((tab) => {
+        const active = current === tab.id
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onSelect(tab.id)}
+            className="flex-1 min-h-9 rounded-xl text-[10px] font-semibold transition-colors relative"
+            style={{
+              color: active ? 'var(--color-accent-text)' : 'var(--color-slate-400)',
+              background: active ? 'var(--color-accent-soft)' : 'transparent',
+            }}
+          >
+            {tab.label}
+            {tab.id === 'requests' && pendingCount > 0 && (
+              <span
+                className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white"
+                style={{ background: 'var(--color-accent)' }}
+              >
+                {pendingCount}
+              </span>
+            )}
+          </button>
+        )
+      })}
     </nav>
   )
 }
 
-function Dashboard({
-  categoryId,
-  available,
-  status,
-  requestText,
-  onAvailabilityChange,
-  onOpportunity,
-  onConsultation,
-  onEarnings,
-  onReset,
-}: {
-  categoryId: CategoryId
-  available: boolean
-  status: ConsultationStatus
-  requestText: string
-  onAvailabilityChange: (value: boolean) => void
-  onOpportunity: () => void
-  onConsultation: () => void
-  onEarnings: () => void
-  onReset: () => void
-}) {
-  const category = categories[categoryId]
+// ─── HomeScreen ───────────────────────────────────────────────────────────────
 
+function HomeScreen({
+  available,
+  pendingRequests,
+  consultationActive,
+  monthEarnings,
+  onAvailabilityChange,
+  onGoRequests,
+  onGoConsultation,
+  onGoCalls,
+  onGoProfile,
+}: {
+  available: boolean
+  pendingRequests: DummyRequest[]
+  consultationActive: boolean
+  monthEarnings: number
+  onAvailabilityChange: (v: boolean) => void
+  onGoRequests: () => void
+  onGoConsultation: () => void
+  onGoCalls: () => void
+  onGoProfile: () => void
+}) {
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
-      <div className="pt-2 pb-6">
-        <p className="text-[11px] uppercase tracking-wide text-[var(--color-slate-400)]">Good morning, Alex</p>
-        <h1 className="font-display text-[32px] text-[var(--color-slate-100)]">Expert dashboard</h1>
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
+      <div className="pt-2 pb-5">
+        <p className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--color-slate-400)' }}>Good morning</p>
+        <h1 className="font-display text-[30px]" style={{ color: 'var(--color-slate-100)' }}>{EXPERT.name}</h1>
       </div>
 
-      <div className="rounded-3xl p-5 mb-4 flex items-center justify-between bg-[var(--color-slate-900)] border border-[var(--color-slate-700)]">
+      {/* Availability */}
+      <div
+        className="rounded-3xl p-5 mb-4 flex items-center justify-between border"
+        style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+      >
         <div>
-          <p className="text-[13px] font-semibold text-[var(--color-slate-100)]">Available for requests</p>
-          <p className="text-[10px] mt-1 text-[var(--color-slate-400)]">
+          <p className="text-[13px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>Available for requests</p>
+          <p className="text-[10px] mt-1" style={{ color: 'var(--color-slate-400)' }}>
             {available ? 'Clients can be matched with you' : 'New matching is paused'}
           </p>
         </div>
@@ -174,157 +355,296 @@ function Dashboard({
           className="w-12 h-7 rounded-full p-1 transition-colors"
           style={{ background: available ? 'var(--color-accent)' : 'var(--color-slate-700)' }}
         >
-          <span className={`block w-5 h-5 rounded-full bg-white transition-transform ${available ? 'translate-x-5' : 'translate-x-0'}`}/>
+          <span className={`block w-5 h-5 rounded-full bg-white transition-transform ${available ? 'translate-x-5' : 'translate-x-0'}`} />
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <button type="button" onClick={onEarnings} className="rounded-2xl p-4 text-left bg-[var(--color-slate-900)] border border-[var(--color-slate-700)]">
-          <span className="block text-[10px] uppercase tracking-wide text-[var(--color-slate-400)]">This month</span>
-          <span className="block font-display text-[26px] mt-1 text-[var(--color-slate-100)]">
-            {status === 'completed' ? '£17.50' : '£0.00'}
-          </span>
-          <span className="block text-[10px] text-[var(--color-accent-text)]">View earnings</span>
-        </button>
-        <div className="rounded-2xl p-4 bg-[var(--color-slate-900)] border border-[var(--color-slate-700)]">
-          <span className="block text-[10px] uppercase tracking-wide text-[var(--color-slate-400)]">Profile</span>
-          <span className="block font-display text-[26px] mt-1 text-[var(--color-slate-100)]">100%</span>
-          <span className="block text-[10px] text-[var(--color-accent-text)]">Verified</span>
-        </div>
-      </div>
-
-      {status === 'new' && (
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <button
           type="button"
-          onClick={onOpportunity}
-          className="w-full rounded-3xl p-5 text-left border bg-[var(--color-accent-soft)] border-[var(--color-accent-border)]"
+          onClick={onGoProfile}
+          className="rounded-2xl p-3 text-left border"
+          style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
         >
-          <span className="flex items-center justify-between mb-3">
-            <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--color-accent-text)]">New consultation request</span>
-            <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse"/>
-          </span>
-          <span className="block text-[15px] font-semibold mb-2 text-[var(--color-slate-100)]">{category.shortName}</span>
-          <span className="block text-[12px] leading-relaxed mb-4 text-[var(--color-slate-400)]">{requestText}</span>
-          <span className="flex items-center justify-between pt-3 border-t border-[var(--color-accent-border)]">
-            <span className="text-[11px] text-[var(--color-slate-400)]">Expert payout</span>
-            <span className="text-[13px] font-bold text-[var(--color-accent-text)]">£17.50</span>
-          </span>
+          <span className="block text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-slate-400)' }}>Rating</span>
+          <span className="block font-display text-[22px] mt-1" style={{ color: 'var(--color-slate-100)' }}>{EXPERT.rating}</span>
+          <Stars rating={5} size={8} />
+        </button>
+        <button
+          type="button"
+          onClick={onGoProfile}
+          className="rounded-2xl p-3 text-left border"
+          style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+        >
+          <span className="block text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-slate-400)' }}>Sessions</span>
+          <span className="block font-display text-[22px] mt-1" style={{ color: 'var(--color-slate-100)' }}>{EXPERT.consultations}</span>
+          <span className="block text-[9px]" style={{ color: 'var(--color-accent-text)' }}>Total</span>
+        </button>
+        <button
+          type="button"
+          onClick={onGoProfile}
+          className="rounded-2xl p-3 text-left border"
+          style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+        >
+          <span className="block text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-slate-400)' }}>This month</span>
+          <span className="block font-display text-[22px] mt-1" style={{ color: 'var(--color-slate-100)' }}>£{monthEarnings.toFixed(0)}</span>
+          <span className="block text-[9px]" style={{ color: 'var(--color-accent-text)' }}>Earnings</span>
+        </button>
+      </div>
+
+      {/* Active consultation */}
+      {consultationActive && (
+        <button
+          type="button"
+          onClick={onGoConsultation}
+          className="w-full rounded-3xl p-5 mb-4 text-left border"
+          style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-accent)' }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-accent)' }} />
+            <span className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--color-accent-text)' }}>Active consultation</span>
+          </div>
+          <p className="text-[14px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>Client is waiting for your reply</p>
+          <p className="text-[11px] mt-1" style={{ color: 'var(--color-slate-400)' }}>Immigration — Skilled Worker visa risk</p>
+          <p className="text-[11px] mt-3 font-semibold" style={{ color: 'var(--color-accent-text)' }}>Open consultation →</p>
         </button>
       )}
 
-      {status === 'active' && (
-        <button type="button" onClick={onConsultation} className="w-full rounded-3xl p-5 text-left border bg-[var(--color-slate-900)] border-[var(--color-accent)]">
-          <span className="text-[10px] uppercase tracking-wide font-semibold text-[var(--color-accent-text)]">Active consultation</span>
-          <span className="block text-[15px] font-semibold mt-2 text-[var(--color-slate-100)]">Client is waiting</span>
-          <span className="block text-[12px] mt-1 text-[var(--color-slate-400)]">Open the secure workspace to continue.</span>
+      {/* Pending requests preview */}
+      {pendingRequests.length > 0 && !consultationActive && (
+        <button
+          type="button"
+          onClick={onGoRequests}
+          className="w-full rounded-3xl p-5 mb-4 text-left border"
+          style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)' }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--color-accent-text)' }}>
+              {pendingRequests.length} pending {pendingRequests.length === 1 ? 'request' : 'requests'}
+            </span>
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-accent)' }} />
+          </div>
+          <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--color-slate-100)' }}>
+            {pendingRequests[0].category} — {pendingRequests[0].urgency} gravity
+          </p>
+          <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--color-slate-400)' }}>
+            {pendingRequests[0].query}
+          </p>
+          <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid var(--color-accent-border)' }}>
+            <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Top payout</span>
+            <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{pendingRequests[0].payout}.00</span>
+          </div>
         </button>
       )}
 
-      {(status === 'completed' || status === 'declined') && (
-        <div className="rounded-3xl p-5 border bg-[var(--color-slate-900)] border-[var(--color-slate-700)]">
-          <p className="text-[13px] font-semibold text-[var(--color-slate-100)]">
-            {status === 'completed' ? 'Consultation completed' : 'Request declined'}
-          </p>
-          <p className="text-[11px] mt-1 text-[var(--color-slate-400)]">
-            {status === 'completed' ? 'Your payout is being processed.' : 'You will not be penalised for declining work outside your scope.'}
-          </p>
-          <button type="button" onClick={onReset} className="mt-4 text-[11px] font-semibold text-[var(--color-accent-text)]">
-            Reset demo request
-          </button>
+      {/* Next call */}
+      <button
+        type="button"
+        onClick={onGoCalls}
+        className="w-full rounded-3xl p-5 mb-4 text-left border"
+        style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+      >
+        <p className="text-[10px] uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>Next scheduled call</p>
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-bold flex-shrink-0"
+            style={{ background: 'var(--color-slate-700)', color: 'var(--color-slate-200)' }}
+          >
+            {DUMMY_CALLS[0].clientInitial}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{DUMMY_CALLS[0].clientName}</p>
+            <p className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>{DUMMY_CALLS[0].topic}</p>
+          </div>
+          <div className="ml-auto text-right flex-shrink-0">
+            <p className="text-[12px] font-semibold" style={{ color: 'var(--color-slate-200)' }}>{DUMMY_CALLS[0].day}</p>
+            <p className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>{DUMMY_CALLS[0].time}</p>
+          </div>
         </div>
-      )}
+      </button>
 
-      <div className="rounded-2xl p-4 mt-5 bg-[var(--color-slate-800)]">
-        <p className="text-[11px] font-semibold text-[var(--color-slate-200)]">Verification current</p>
-        <p className="text-[10px] mt-1 text-[var(--color-slate-400)]">Next document review due in 94 days.</p>
+      {/* Verification status */}
+      <div className="rounded-2xl p-4" style={{ background: 'var(--color-slate-800)' }}>
+        <p className="text-[11px] font-semibold" style={{ color: 'var(--color-slate-200)' }}>Verification current</p>
+        <p className="text-[10px] mt-1" style={{ color: 'var(--color-slate-400)' }}>Next document review due in 94 days.</p>
       </div>
     </div>
   )
 }
 
-function Opportunity({
-  categoryId,
-  status,
-  requestText,
-  onAccept,
-  onDecline,
-}: {
-  categoryId: CategoryId
-  status: ConsultationStatus
-  requestText: string
-  onAccept: () => void
-  onDecline: () => void
-}) {
-  const category = categories[categoryId]
+// ─── RequestsScreen ───────────────────────────────────────────────────────────
 
-  if (status !== 'new') {
+function RequestsScreen({
+  requests,
+  consultationActive,
+  onSelect,
+  onGoConsultation,
+}: {
+  requests: DummyRequest[]
+  consultationActive: boolean
+  onSelect: (id: string) => void
+  onGoConsultation: () => void
+}) {
+  if (requests.length === 0 && !consultationActive) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-        <div className="w-12 h-12 rounded-full mb-4 flex items-center justify-center bg-[var(--color-slate-800)]">
+        <div
+          className="w-12 h-12 rounded-full mb-4 flex items-center justify-center"
+          style={{ background: 'var(--color-slate-800)' }}
+        >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M4 10h12M10 4v12" stroke="var(--color-slate-400)" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M4 10h12M10 4v12" stroke="var(--color-slate-400)" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </div>
-        <h2 className="text-[17px] font-semibold text-[var(--color-slate-100)]">No new requests</h2>
-        <p className="text-[12px] mt-2 text-[var(--color-slate-400)]">Eligible opportunities will appear here when you are available.</p>
+        <h2 className="text-[17px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>No new requests</h2>
+        <p className="text-[12px] mt-2" style={{ color: 'var(--color-slate-400)' }}>Eligible opportunities will appear here when you are available.</p>
       </div>
     )
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in flex flex-col">
-      <div className="pt-2 pb-6">
-        <p className="text-[11px] uppercase tracking-wide text-[var(--color-accent-text)]">Respond within 4 minutes</p>
-        <h1 className="font-display text-[30px] text-[var(--color-slate-100)]">Review request</h1>
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
+      <div className="pt-2 pb-5">
+        <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>Requests</h1>
       </div>
-      <div className="rounded-3xl p-5 border mb-4 bg-[var(--color-slate-900)] border-[var(--color-slate-700)]">
-        <span className="inline-flex rounded-full px-3 py-1.5 mb-4 text-[10px] font-semibold bg-[var(--color-accent-soft)] text-[var(--color-accent-text)]">{category.name}</span>
-        <p className="text-[13px] leading-[1.65] text-[var(--color-slate-200)]">{requestText}</p>
+
+      {consultationActive && (
+        <button
+          type="button"
+          onClick={onGoConsultation}
+          className="w-full rounded-3xl p-4 mb-5 text-left border"
+          style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-accent)' }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-accent)' }} />
+            <span className="text-[11px] font-semibold" style={{ color: 'var(--color-accent-text)' }}>Active consultation in progress</span>
+          </div>
+          <p className="text-[12px] mt-1.5" style={{ color: 'var(--color-slate-400)' }}>Immigration — Skilled Worker visa risk</p>
+        </button>
+      )}
+
+      {requests.length > 0 && (
+        <p className="text-[10px] uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>
+          Respond within 4 minutes to maintain response score
+        </p>
+      )}
+
+      <div className="space-y-3">
+        {requests.map((req) => (
+          <button
+            key={req.id}
+            type="button"
+            onClick={() => onSelect(req.id)}
+            className="w-full rounded-3xl p-5 text-left border transition-colors"
+            style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CategoryBadge label={req.category} />
+                <UrgencyBadge level={req.urgency} />
+              </div>
+              <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--color-slate-600)' }}>{req.receivedAgo}</span>
+            </div>
+            <p className="text-[12px] leading-relaxed line-clamp-3 mb-3" style={{ color: 'var(--color-slate-200)' }}>{req.query}</p>
+            <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--color-slate-700)' }}>
+              <div>
+                <span className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>Tier: </span>
+                <span className="text-[10px] font-semibold" style={{ color: 'var(--color-slate-200)' }}>{req.tier}</span>
+              </div>
+              <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{req.payout}.00</span>
+            </div>
+          </button>
+        ))}
       </div>
-      <div className="rounded-2xl p-4 mb-4 space-y-3 bg-[var(--color-slate-800)]">
-        <Detail label="Urgency" value={categoryId === 'plumber' ? 'Now' : 'This week'}/>
-        <Detail label="Format" value="Secure text consultation"/>
-        <Detail label="Expected duration" value="Up to 30 minutes"/>
-        <Detail label="Your payout" value="£17.50"/>
+    </div>
+  )
+}
+
+// ─── RequestDetailScreen ──────────────────────────────────────────────────────
+
+function RequestDetailScreen({
+  request,
+  onAccept,
+  onDecline,
+  onBack,
+}: {
+  request: DummyRequest
+  onAccept: () => void
+  onDecline: () => void
+  onBack: () => void
+}) {
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in flex flex-col">
+      <div className="pt-2 pb-5 flex items-center gap-3">
+        <button type="button" onClick={onBack} className="min-h-10 -ml-2 px-2 text-[11px] font-semibold" style={{ color: 'var(--color-slate-400)' }}>
+          ← Back
+        </button>
       </div>
-      <p className="text-[10px] leading-relaxed mb-5 text-[var(--color-slate-600)]">
-        Only accept requests that are within your verified competence. Declining an unsuitable request does not affect your profile.
+
+      <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: 'var(--color-accent-text)' }}>
+        Respond within 4 minutes
       </p>
-      <button type="button" onClick={onDecline} className="w-full min-h-11 rounded-2xl mb-3 border border-[var(--color-slate-700)] text-[12px] font-semibold text-[var(--color-slate-400)]">
+      <h1 className="font-display text-[28px] mb-5" style={{ color: 'var(--color-slate-100)' }}>Review request</h1>
+
+      <div className="rounded-3xl p-5 border mb-4" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <CategoryBadge label={request.category} />
+          <UrgencyBadge level={request.urgency} />
+          <span className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>{request.receivedAgo}</span>
+        </div>
+        <p className="text-[13px] leading-[1.7]" style={{ color: 'var(--color-slate-200)' }}>{request.query}</p>
+      </div>
+
+      <div className="rounded-2xl p-4 mb-4 space-y-3" style={{ background: 'var(--color-slate-800)' }}>
+        <Row label="Expert tier booked" value={request.tier} />
+        <Row label="Urgency assessment" value={request.urgency} />
+        <Row label="Format" value="Secure text consultation" />
+        <Row label="Expected duration" value="Up to 30 minutes" />
+        <Row label="Your payout" value={`£${request.payout}.00`} />
+      </div>
+
+      <p className="text-[10px] leading-relaxed mb-5" style={{ color: 'var(--color-slate-600)' }}>
+        Only accept requests within your verified competence. Declining does not affect your profile or response score.
+      </p>
+
+      <button
+        type="button"
+        onClick={onDecline}
+        className="w-full min-h-11 rounded-2xl mb-3 border text-[12px] font-semibold"
+        style={{ borderColor: 'var(--color-slate-700)', color: 'var(--color-slate-400)' }}
+      >
         Decline request
       </button>
-      <button type="button" onClick={onAccept} className="w-full min-h-13 mt-auto rounded-2xl bg-[var(--color-accent)] text-white text-[14px] font-semibold">
-        Accept consultation · £17.50
+      <button
+        type="button"
+        onClick={onAccept}
+        className="w-full min-h-13 mt-auto rounded-2xl text-white text-[14px] font-semibold"
+        style={{ background: 'var(--color-accent)' }}
+      >
+        Accept consultation · £{request.payout}.00
       </button>
     </div>
   )
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-[11px] text-[var(--color-slate-400)]">{label}</span>
-      <span className="text-[11px] font-semibold text-right text-[var(--color-slate-200)]">{value}</span>
-    </div>
-  )
-}
+// ─── ConsultationScreen ───────────────────────────────────────────────────────
 
-function ExpertConsultation({
-  categoryId,
-  requestText,
-  onBack,
+function ConsultationScreen({
+  messages,
+  onSend,
+  input,
+  onInputChange,
   onComplete,
+  onBack,
 }: {
-  categoryId: CategoryId
-  requestText: string
-  onBack: () => void
+  messages: ChatMessage[]
+  onSend: () => void
+  input: string
+  onInputChange: (v: string) => void
   onComplete: () => void
+  onBack: () => void
 }) {
-  const category = categories[categoryId]
-  const [input, setInput] = useState('')
-  const [messages, setMessages] = useState([
-    { from: 'client', text: requestText },
-  ])
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -332,55 +652,79 @@ function ExpertConsultation({
     if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
-  function send() {
-    if (!input.trim()) return
-    setMessages((current) => [...current, { from: 'expert', text: input.trim() }])
-    setInput('')
-  }
-
   return (
     <div className="flex-1 min-h-0 flex flex-col animate-fade-in">
-      <div className="flex-shrink-0 px-5 py-3 border-b border-[var(--color-slate-700)] bg-[var(--color-ground-deep)]">
+      <div
+        className="flex-shrink-0 px-5 py-3 border-b"
+        style={{ borderColor: 'var(--color-slate-700)', background: 'var(--color-ground-deep)' }}
+      >
         <div className="flex items-center justify-between gap-3">
-          <button type="button" onClick={onBack} className="min-h-10 px-2 text-[11px] font-semibold text-[var(--color-slate-400)]">Back</button>
+          <button type="button" onClick={onBack} className="min-h-10 px-2 text-[11px] font-semibold" style={{ color: 'var(--color-slate-400)' }}>Back</button>
           <div className="text-center min-w-0">
-            <p className="text-[13px] font-semibold text-[var(--color-slate-100)]">Client consultation</p>
-            <p className="text-[10px] truncate text-[var(--color-slate-400)]">{category.shortName}</p>
+            <p className="text-[13px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>Active consultation</p>
+            <p className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>Immigration</p>
           </div>
-          <button type="button" onClick={onComplete} className="min-h-10 px-3 rounded-xl text-[11px] font-semibold bg-[var(--color-slate-800)] text-[var(--color-slate-200)]">Complete</button>
+          <button
+            type="button"
+            onClick={onComplete}
+            className="min-h-10 px-3 rounded-xl text-[11px] font-semibold"
+            style={{ background: 'var(--color-slate-800)', color: 'var(--color-slate-200)' }}
+          >
+            Complete
+          </button>
         </div>
       </div>
-      <div className="flex-shrink-0 px-5 py-3 bg-[var(--color-accent-soft)]">
-        <p className="text-[10px] uppercase tracking-wide font-semibold mb-1 text-[var(--color-accent-text)]">Request summary</p>
-        <p className="text-[11px] leading-relaxed line-clamp-2 text-[var(--color-slate-400)]">{requestText}</p>
+      <div
+        className="flex-shrink-0 px-5 py-3"
+        style={{ background: 'var(--color-accent-soft)' }}
+      >
+        <p className="text-[10px] uppercase tracking-wide font-semibold mb-1" style={{ color: 'var(--color-accent-text)' }}>Request summary</p>
+        <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--color-slate-400)' }}>
+          Skilled Worker visa risk — employer threatening contract termination, 3 years in UK, PR in 18 months
+        </p>
       </div>
       <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-5 space-y-4">
-        {messages.map((message, index) => (
-          <div key={index} className={`flex ${message.from === 'expert' ? 'justify-end' : 'justify-start'}`}>
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex ${msg.from === 'expert' ? 'justify-end' : 'justify-start'}`}>
             <div
               className="max-w-[84%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed"
               style={{
-                background: message.from === 'expert' ? 'var(--color-accent)' : 'var(--color-slate-900)',
-                color: message.from === 'expert' ? 'white' : 'var(--color-slate-200)',
+                background: msg.from === 'expert' ? 'var(--color-accent)' : 'var(--color-slate-900)',
+                color: msg.from === 'expert' ? 'white' : 'var(--color-slate-200)',
               }}
             >
-              {message.text}
+              {msg.text}
             </div>
           </div>
         ))}
       </div>
-      <div className="flex-shrink-0 flex gap-2 px-4 py-3 bg-[var(--color-ground-base)]">
+      <div
+        className="flex-shrink-0 flex gap-2 px-4 py-3"
+        style={{ background: 'var(--color-ground-base)' }}
+      >
         <input
           value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={(event) => event.key === 'Enter' && send()}
+          onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && onSend()}
           placeholder="Reply to the client…"
           aria-label="Reply to the client"
-          className="flex-1 min-w-0 h-11 rounded-2xl px-4 outline-none text-[13px] bg-[var(--color-ground-deep)] text-[var(--color-slate-100)] border border-[var(--color-slate-700)] focus:border-[var(--color-accent)]"
+          className="flex-1 min-w-0 h-11 rounded-2xl px-4 outline-none text-[13px]"
+          style={{
+            background: 'var(--color-ground-deep)',
+            color: 'var(--color-slate-100)',
+            border: '1px solid var(--color-slate-700)',
+          }}
         />
-        <button type="button" onClick={send} disabled={!input.trim()} aria-label="Send message" className="w-11 h-11 rounded-full bg-[var(--color-accent)] disabled:opacity-40 flex items-center justify-center">
+        <button
+          type="button"
+          onClick={onSend}
+          disabled={!input.trim()}
+          aria-label="Send message"
+          className="w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-40"
+          style={{ background: 'var(--color-accent)' }}
+        >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M14 8L2 2l3 6-3 6z" fill="white"/>
+            <path d="M14 8L2 2l3 6-3 6z" fill="white" />
           </svg>
         </button>
       </div>
@@ -388,46 +732,493 @@ function ExpertConsultation({
   )
 }
 
-function Earnings({ status }: { status: ConsultationStatus }) {
-  const hasEarnings = status === 'completed'
+// ─── ConsultationCompleteScreen ────────────────────────────────────────────────
 
+function ConsultationCompleteScreen({
+  payout,
+  onDone,
+}: {
+  payout: number
+  onDone: () => void
+}) {
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
-      <div className="pt-2 pb-7">
-        <p className="text-[11px] uppercase tracking-wide text-[var(--color-slate-400)]">Expert payouts</p>
-        <h1 className="font-display text-[32px] text-[var(--color-slate-100)]">Earnings</h1>
+    <div className="flex-1 flex flex-col items-center justify-center text-center px-8 animate-fade-in">
+      <div
+        className="w-16 h-16 rounded-full mb-6 flex items-center justify-center"
+        style={{ background: 'var(--color-accent-soft)' }}
+      >
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+          <path d="M6 14l6 6 10-12" stroke="var(--color-accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </div>
-      <div className="rounded-3xl p-6 mb-4 bg-[var(--color-slate-900)] border border-[var(--color-slate-700)]">
-        <p className="text-[10px] uppercase tracking-wide text-[var(--color-slate-400)]">Available balance</p>
-        <p className="font-display text-[46px] leading-none mt-3 text-[var(--color-slate-100)]">
-          {hasEarnings ? '£17.50' : '£0.00'}
+      <h2 className="font-display text-[28px] mb-2" style={{ color: 'var(--color-slate-100)' }}>Consultation complete</h2>
+      <p className="text-[13px] leading-relaxed mb-2" style={{ color: 'var(--color-slate-400)' }}>
+        Your payout of <span className="font-semibold" style={{ color: 'var(--color-accent-text)' }}>£{payout}.00</span> is being processed and will appear in your balance within 24 hours.
+      </p>
+      <p className="text-[11px] mb-8" style={{ color: 'var(--color-slate-600)' }}>
+        The client will be prompted to rate this consultation.
+      </p>
+      <button
+        type="button"
+        onClick={onDone}
+        className="w-full min-h-13 rounded-2xl text-white text-[14px] font-semibold"
+        style={{ background: 'var(--color-accent)' }}
+      >
+        Back to dashboard
+      </button>
+    </div>
+  )
+}
+
+// ─── CallsScreen ──────────────────────────────────────────────────────────────
+
+function CallsScreen({
+  calls,
+  onJoin,
+}: {
+  calls: DummyCall[]
+  onJoin: (id: string) => void
+}) {
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
+      <div className="pt-2 pb-5">
+        <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>Scheduled calls</h1>
+      </div>
+
+      <div className="space-y-3 mb-6">
+        {calls.map((call) => (
+          <div
+            key={call.id}
+            className="rounded-3xl p-5 border"
+            style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-bold flex-shrink-0"
+                style={{ background: 'var(--color-slate-700)', color: 'var(--color-slate-200)' }}
+              >
+                {call.clientInitial}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{call.clientName}</p>
+                <p className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>{call.topic}</p>
+              </div>
+              <CategoryBadge label={call.category} />
+            </div>
+
+            <div className="space-y-2 mb-4">
+              <Row label="When" value={`${call.day} at ${call.time}`} />
+              <Row label="Duration" value={call.duration} />
+              <Row label="Your payout" value={`£${call.payout}.00`} />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onJoin(call.id)}
+              className="w-full min-h-10 rounded-2xl text-[12px] font-semibold"
+              style={{ background: 'var(--color-slate-700)', color: 'var(--color-slate-200)' }}
+            >
+              Available {call.day} at {call.time}
+            </button>
+            <button
+              type="button"
+              onClick={() => onJoin(call.id)}
+              className="w-full mt-2 text-[10px] font-semibold"
+              style={{ color: 'var(--color-accent-text)' }}
+            >
+              Demo — join now
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl p-4" style={{ background: 'var(--color-slate-800)' }}>
+        <p className="text-[11px] font-semibold mb-1" style={{ color: 'var(--color-slate-200)' }}>Calls are end-to-end encrypted</p>
+        <p className="text-[10px] leading-relaxed" style={{ color: 'var(--color-slate-400)' }}>
+          Join from a quiet location with a stable internet connection. Calls begin automatically when both parties join.
         </p>
-        <p className="text-[10px] mt-3 text-[var(--color-slate-600)]">Paid to your verified bank account weekly</p>
-      </div>
-      {hasEarnings ? (
-        <div className="rounded-2xl p-4 border bg-[var(--color-slate-900)] border-[var(--color-slate-700)]">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[12px] font-semibold text-[var(--color-slate-100)]">Text consultation</span>
-            <span className="text-[13px] font-bold text-[var(--color-accent-text)]">£17.50</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-[var(--color-slate-600)]">Today</span>
-            <span className="rounded-full px-2 py-1 text-[9px] font-semibold bg-[var(--color-accent-soft)] text-[var(--color-accent-text)]">Pending payout</span>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-2xl p-5 text-center bg-[var(--color-slate-800)]">
-          <p className="text-[12px] font-semibold text-[var(--color-slate-200)]">No earnings yet</p>
-          <p className="text-[10px] mt-1 text-[var(--color-slate-400)]">Completed consultations will appear here.</p>
-        </div>
-      )}
-      <div className="rounded-2xl p-4 mt-5 bg-[var(--color-slate-800)]">
-        <Detail label="Client price" value="£25.00"/>
-        <div className="h-px my-3 bg-[var(--color-slate-700)]"/>
-        <Detail label="Your consultation payout" value="£17.50"/>
-        <div className="h-px my-3 bg-[var(--color-slate-700)]"/>
-        <Detail label="Platform fee and VAT" value="£7.50"/>
       </div>
     </div>
+  )
+}
+
+// ─── CallActiveScreen ─────────────────────────────────────────────────────────
+
+function CallActiveScreen({
+  call,
+  onEnd,
+}: {
+  call: DummyCall
+  onEnd: () => void
+}) {
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const mins = String(Math.floor(elapsed / 60)).padStart(2, '0')
+  const secs = String(elapsed % 60).padStart(2, '0')
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-center px-6 animate-fade-in">
+      <div className="w-20 h-20 rounded-full mb-4 flex items-center justify-center text-[28px] font-bold"
+        style={{ background: 'var(--color-slate-800)', color: 'var(--color-slate-200)' }}>
+        {call.clientInitial}
+      </div>
+      <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--color-slate-100)' }}>{call.clientName}</p>
+      <p className="text-[11px] mb-2" style={{ color: 'var(--color-slate-400)' }}>{call.topic}</p>
+      <p className="font-display text-[36px] mb-1" style={{ color: 'var(--color-slate-100)' }}>
+        {mins}:{secs}
+      </p>
+      <p className="text-[10px] mb-10" style={{ color: 'var(--color-accent-text)' }}>Call in progress · Encrypted</p>
+
+      <div className="flex items-center gap-6 mb-10">
+        <button type="button" className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'var(--color-slate-800)' }} aria-label="Mute">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M10 2a3 3 0 00-3 3v5a3 3 0 006 0V5a3 3 0 00-3-3zM5 10a5 5 0 0010 0M10 15v3" stroke="var(--color-slate-200)" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+        <button type="button" className="w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'var(--color-slate-800)' }} aria-label="Speaker">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M3 7h3l5-4v14l-5-4H3V7zM14 7a4 4 0 010 6" stroke="var(--color-slate-200)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={onEnd}
+        className="w-full min-h-13 rounded-2xl text-white text-[14px] font-semibold"
+        style={{ background: '#c0392b' }}
+      >
+        End call
+      </button>
+    </div>
+  )
+}
+
+// ─── HistoryScreen ────────────────────────────────────────────────────────────
+
+function HistoryScreen({ items }: { items: HistoryItem[] }) {
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
+      <div className="pt-2 pb-5">
+        <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>History</h1>
+      </div>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="rounded-3xl p-5 border"
+            style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CategoryBadge label={item.category} />
+                <span
+                  className="rounded-full px-2.5 py-1 text-[10px] font-semibold"
+                  style={{ background: 'var(--color-slate-800)', color: 'var(--color-slate-400)' }}
+                >
+                  {item.format}
+                </span>
+              </div>
+              <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--color-slate-600)' }}>
+                {item.daysAgo === 1 ? 'Yesterday' : `${item.daysAgo} days ago`}
+              </span>
+            </div>
+
+            <p className="text-[12px] font-semibold mb-2" style={{ color: 'var(--color-slate-100)' }}>{item.querySnippet}</p>
+
+            <div className="flex items-center gap-2 mb-3">
+              <Stars rating={item.rating} />
+              <span className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>{item.rating}.0</span>
+            </div>
+
+            <p className="text-[11px] leading-relaxed mb-3 italic" style={{ color: 'var(--color-slate-400)' }}>
+              "{item.review}"
+            </p>
+
+            <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--color-slate-700)' }}>
+              <span className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>Payout</span>
+              <span className="text-[12px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{item.payout}.00</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── ProfileScreen ────────────────────────────────────────────────────────────
+
+function ProfileScreen() {
+  return (
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
+      <div className="pt-2 pb-5">
+        <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>Profile</h1>
+      </div>
+
+      {/* Identity card */}
+      <div className="rounded-3xl p-5 border mb-4" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        <div className="flex items-center gap-4 mb-4">
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center text-[22px] font-bold flex-shrink-0"
+            style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent-text)' }}
+          >
+            AC
+          </div>
+          <div>
+            <p className="text-[17px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{EXPERT.name}</p>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-slate-400)' }}>{EXPERT.category}</p>
+            <span
+              className="inline-flex mt-1 rounded-full px-2.5 py-1 text-[10px] font-semibold"
+              style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent-text)' }}
+            >
+              {EXPERT.tier}
+            </span>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Row label="Member since" value={EXPERT.memberSince} />
+          <Row label="Avg. response time" value={EXPERT.responseTime} />
+          <Row label="Next verification" value="In 94 days" />
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="rounded-2xl p-4 border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+          <span className="block text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-slate-400)' }}>Rating</span>
+          <span className="block font-display text-[28px] mt-1" style={{ color: 'var(--color-slate-100)' }}>{EXPERT.rating} ★</span>
+          <span className="block text-[10px] mt-1" style={{ color: 'var(--color-slate-600)' }}>From {EXPERT.consultations} consultations</span>
+        </div>
+        <div className="rounded-2xl p-4 border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+          <span className="block text-[9px] uppercase tracking-wide" style={{ color: 'var(--color-slate-400)' }}>Total earned</span>
+          <span className="block font-display text-[28px] mt-1" style={{ color: 'var(--color-slate-100)' }}>£{EXPERT.totalEarnings.toFixed(0)}</span>
+          <span className="block text-[10px] mt-1" style={{ color: 'var(--color-accent-text)' }}>£{EXPERT.monthEarnings.toFixed(0)} this month</span>
+        </div>
+      </div>
+
+      {/* Earnings breakdown */}
+      <div className="rounded-3xl p-5 border mb-4" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        <p className="text-[11px] uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>Payout rates</p>
+        <div className="space-y-2">
+          <Row label="Chat (Senior VP)" value="£32.00 per session" />
+          <Row label="Call (Senior VP)" value="£90.00 per call" />
+          <div className="h-px my-2" style={{ background: 'var(--color-slate-700)' }} />
+          <Row label="Platform fee" value="28% of client price" />
+        </div>
+      </div>
+
+      {/* Credentials */}
+      <div className="rounded-3xl p-5 border mb-4" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+        <p className="text-[11px] uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>Verified credentials</p>
+        <div className="space-y-3">
+          {[
+            { label: 'LLB Law (Hons)', sub: 'University of Leeds, 2014' },
+            { label: 'Solicitor (non-practising)', sub: 'SRA — lapsed 2021, academic reference verified' },
+            { label: 'Immigration casework experience', sub: '6 years — OISC Level 3 equivalent' },
+          ].map((cred) => (
+            <div key={cred.label} className="flex items-start gap-3">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="flex-shrink-0 mt-0.5" aria-hidden="true">
+                <circle cx="8" cy="8" r="6" stroke="var(--color-accent)" strokeWidth="1.4" />
+                <path d="M5.5 8l2 2 3-3" stroke="var(--color-accent)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <div>
+                <p className="text-[12px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{cred.label}</p>
+                <p className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>{cred.sub}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-2xl p-4" style={{ background: 'var(--color-slate-800)' }}>
+        <p className="text-[11px] font-semibold mb-1" style={{ color: 'var(--color-slate-200)' }}>Quality metrics</p>
+        <div className="space-y-1.5 mt-2">
+          <Row label="Client satisfaction" value="98%" />
+          <Row label="Response within 2 min" value="94%" />
+          <Row label="Substantiated complaints" value="0" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export default function ExpertDashboard() {
+  const navigate = useNavigate()
+  const [screen, setScreen] = useState<ExpertScreen>('home')
+  const [available, setAvailable] = useState(
+    () => localStorage.getItem('specialist.expert.available') !== 'false'
+  )
+  const [pendingRequests, setPendingRequests] = useState<DummyRequest[]>(INITIAL_REQUESTS)
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
+  const [consultationActive, setConsultationActive] = useState(false)
+  const [consultationComplete, setConsultationComplete] = useState(false)
+  const [acceptedPayout, setAcceptedPayout] = useState(0)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT)
+  const [chatInput, setChatInput] = useState('')
+  const [activeCalls, setActiveCalls] = useState<DummyCall[]>(DUMMY_CALLS)
+  const [activeCallId, setActiveCallId] = useState<string | null>(null)
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>(HISTORY_ITEMS)
+  const [monthEarnings, setMonthEarnings] = useState(EXPERT.monthEarnings)
+
+  useEffect(() => {
+    localStorage.setItem('specialist.expert.available', String(available))
+  }, [available])
+
+  const selectedRequest = pendingRequests.find((r) => r.id === selectedRequestId) ?? null
+  const activeCall = activeCalls.find((c) => c.id === activeCallId) ?? null
+
+  const showTabs = TAB_SCREENS.includes(screen)
+
+  function handleBack() {
+    if (screen === 'request-detail') { setScreen('requests'); return }
+    if (screen === 'consultation') { setScreen('home'); return }
+    if (screen === 'call-active') { setScreen('calls'); return }
+    navigate('/')
+  }
+
+  function handleAcceptRequest() {
+    if (!selectedRequest) return
+    setAcceptedPayout(selectedRequest.payout)
+    setPendingRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id))
+    setConsultationActive(true)
+    setScreen('consultation')
+  }
+
+  function handleDeclineRequest() {
+    if (!selectedRequest) return
+    setPendingRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id))
+    setScreen('requests')
+  }
+
+  function handleCompleteConsultation() {
+    setConsultationActive(false)
+    setConsultationComplete(true)
+    setMonthEarnings((prev) => prev + acceptedPayout)
+    setHistoryItems((prev) => [
+      {
+        id: `h-new-${Date.now()}`,
+        category: 'Immigration',
+        querySnippet: 'Skilled Worker visa risk — employer threatening contract termination',
+        payout: acceptedPayout,
+        daysAgo: 0,
+        rating: 5,
+        review: 'Awaiting client review.',
+        format: 'Chat',
+      },
+      ...prev,
+    ])
+    setScreen('consultation') // will show the complete screen
+  }
+
+  function handleSendChat() {
+    if (!chatInput.trim()) return
+    setChatMessages((prev) => [...prev, { from: 'expert', text: chatInput.trim() }])
+    setChatInput('')
+  }
+
+  function handleJoinCall(id: string) {
+    setActiveCallId(id)
+    setScreen('call-active')
+  }
+
+  function handleEndCall() {
+    if (!activeCall) return
+    setActiveCalls((prev) => prev.filter((c) => c.id !== activeCallId))
+    setMonthEarnings((prev) => prev + activeCall.payout)
+    setActiveCallId(null)
+    setScreen('calls')
+  }
+
+  return (
+    <AppShell onHome={() => navigate('/')} onBack={handleBack}>
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        {showTabs && (
+          <WorkspaceTabs
+            current={screen}
+            pendingCount={pendingRequests.length}
+            onSelect={setScreen}
+          />
+        )}
+
+        {screen === 'home' && (
+          <HomeScreen
+            available={available}
+            pendingRequests={pendingRequests}
+            consultationActive={consultationActive}
+            monthEarnings={monthEarnings}
+            onAvailabilityChange={setAvailable}
+            onGoRequests={() => setScreen('requests')}
+            onGoConsultation={() => setScreen('consultation')}
+            onGoCalls={() => setScreen('calls')}
+            onGoProfile={() => setScreen('profile')}
+          />
+        )}
+
+        {screen === 'requests' && (
+          <RequestsScreen
+            requests={pendingRequests}
+            consultationActive={consultationActive}
+            onSelect={(id) => { setSelectedRequestId(id); setScreen('request-detail') }}
+            onGoConsultation={() => setScreen('consultation')}
+          />
+        )}
+
+        {screen === 'request-detail' && selectedRequest && (
+          <RequestDetailScreen
+            request={selectedRequest}
+            onAccept={handleAcceptRequest}
+            onDecline={handleDeclineRequest}
+            onBack={() => setScreen('requests')}
+          />
+        )}
+
+        {screen === 'consultation' && consultationComplete && (
+          <ConsultationCompleteScreen
+            payout={acceptedPayout}
+            onDone={() => { setConsultationComplete(false); setScreen('home') }}
+          />
+        )}
+
+        {screen === 'consultation' && !consultationComplete && (
+          <ConsultationScreen
+            messages={chatMessages}
+            input={chatInput}
+            onInputChange={setChatInput}
+            onSend={handleSendChat}
+            onComplete={handleCompleteConsultation}
+            onBack={() => setScreen('home')}
+          />
+        )}
+
+        {screen === 'calls' && (
+          <CallsScreen
+            calls={activeCalls}
+            onJoin={handleJoinCall}
+          />
+        )}
+
+        {screen === 'call-active' && activeCall && (
+          <CallActiveScreen
+            call={activeCall}
+            onEnd={handleEndCall}
+          />
+        )}
+
+        {screen === 'history' && (
+          <HistoryScreen items={historyItems} />
+        )}
+
+        {screen === 'profile' && (
+          <ProfileScreen />
+        )}
+      </main>
+    </AppShell>
   )
 }
