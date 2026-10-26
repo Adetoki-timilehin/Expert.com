@@ -1006,16 +1006,33 @@ function TierPicker({
             </button>
 
             {isExpanded && (
-              <div className="px-3 pb-3 pt-1 space-y-1.5 border-t" style={{ borderColor: isSelected ? 'var(--color-accent-border)' : 'var(--color-slate-700)' }}>
-                <p className="text-[11px] leading-relaxed mb-2" style={{ color: 'var(--color-slate-400)' }}>{t.description}</p>
-                {t.details.map((d) => (
-                  <div key={d} className="flex items-start gap-2">
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0 mt-0.5" aria-hidden="true">
-                      <path d="M2 5l2 2 4-4" stroke="var(--color-accent-text)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <div className="px-3 pb-3 pt-2 border-t" style={{ borderColor: isSelected ? 'var(--color-accent-border)' : 'var(--color-slate-700)' }}>
+                <p className="text-[11px] leading-relaxed mb-3" style={{ color: 'var(--color-slate-400)' }}>{t.description}</p>
+
+                {/* Inherited tier summary */}
+                {t.extendsId && (
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true" className="flex-shrink-0">
+                      <circle cx="5.5" cy="5.5" r="4.5" stroke="var(--color-slate-600)" strokeWidth="1"/>
+                      <path d="M3 5.5l1.5 1.5 3-3" stroke="var(--color-slate-600)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    <span className="text-[11px] leading-snug" style={{ color: 'var(--color-slate-200)' }}>{d}</span>
+                    <span className="text-[11px]" style={{ color: 'var(--color-slate-600)' }}>
+                      Everything in <TierBadge tierId={t.extendsId} />, plus:
+                    </span>
                   </div>
-                ))}
+                )}
+
+                {/* This tier's own additions */}
+                <div className="space-y-1.5">
+                  {t.details.map((d) => (
+                    <div key={d} className="flex items-start gap-2">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0 mt-0.5" aria-hidden="true">
+                        <path d="M2 5l2 2 4-4" stroke="var(--color-accent-text)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="text-[11px] leading-snug" style={{ color: 'var(--color-slate-200)' }}>{d}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

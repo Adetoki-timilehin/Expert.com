@@ -10,6 +10,7 @@ export type BadgeVariant = 'outlined-supervised' | 'slate' | 'green-verified' | 
 
 export type TierDefinition = {
   id: ExpertTierId
+  extendsId?: ExpertTierId
   name: string
   price: number
   callPrice?: number
@@ -29,14 +30,13 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
     name: 'Supervised Academy Candidate',
     price: 12,
     expertPayout: 7,
-    description: 'Currently completing the Peasy Academy pathway. The consultation is reviewed by an experienced supervisor.',
+    description: 'Currently completing the Peasy Academy pathway. All work is reviewed by an experienced supervisor before delivery.',
     details: [
-      'Identity checked',
-      'Training in progress',
-      'Restricted low-risk scope',
-      'Client consent required',
-      'Supervisor reviews the work',
-      'May take longer to complete',
+      'Identity verified',
+      'Currently in training',
+      'Low-risk scope only',
+      'All work reviewed by a supervisor',
+      'Response may take longer',
     ],
     suitableFor: 'Straightforward, low-risk requests',
     responseTime: 'Usually within 4 hours',
@@ -46,17 +46,15 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
   },
   'academy-expert': {
     id: 'academy-expert',
+    extendsId: 'supervised-candidate',
     name: 'Academy Expert',
     price: 18,
     expertPayout: 11,
-    description: 'Trained and assessed through the Peasy Academy. Suitable for standard guidance within their completed pathway.',
+    description: 'Has completed the full Peasy Academy pathway and works independently.',
     details: [
-      'Identity checked',
-      'Academy pathway completed',
-      'Scenario assessment passed',
-      'Practical work reviewed',
-      'Supervised consultations completed',
-      'No external professional qualification implied',
+      'Full Academy pathway completed',
+      'Scenario assessments passed',
+      'Works independently — no supervisor',
     ],
     suitableFor: 'Standard low-risk guidance',
     responseTime: 'Usually within 2 hours',
@@ -66,17 +64,16 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
   },
   'verified-professional': {
     id: 'verified-professional',
+    extendsId: 'academy-expert',
     name: 'Verified Professional',
     price: 25,
     callPrice: 55,
     expertPayout: 17,
-    description: 'Relevant external experience or qualifications reviewed by Peasy.',
+    description: 'Holds external professional qualifications or significant industry experience, reviewed and verified by Peasy.',
     details: [
-      'Identity checked',
-      'External credentials reviewed',
-      'Relevant professional experience',
-      'Independent consultation',
-      'Standard response time',
+      'External credentials reviewed and verified',
+      'Relevant professional experience confirmed',
+      'Faster response time',
     ],
     suitableFor: 'Experienced independent support',
     responseTime: 'Usually within 2 minutes',
@@ -86,18 +83,17 @@ export const tiers: Record<ExpertTierId, TierDefinition> = {
   },
   'senior-verified-professional': {
     id: 'senior-verified-professional',
+    extendsId: 'verified-professional',
     name: 'Senior Verified Professional',
     price: 45,
     callPrice: 90,
     expertPayout: 32,
-    description: 'Advanced experience and a strong quality history for more complex requests.',
+    description: 'Top tier. Advanced experience, a strong quality track record, and a minimum consultation history requirement.',
     details: [
-      'External credentials current',
-      'Advanced relevant experience',
-      'Minimum consultation-history requirement',
+      'Advanced experience in complex cases',
+      'Minimum consultation history met',
       'Strong quality-review results',
       'Low substantiated complaint rate',
-      'Best suited to complex requests',
     ],
     suitableFor: 'Complex or high-stakes situations',
     responseTime: 'Usually within 5 minutes',
