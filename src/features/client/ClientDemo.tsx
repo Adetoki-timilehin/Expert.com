@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import AppShell from '../../components/layout/AppShell'
 import FeedbackPrompt from '../../components/feedback/FeedbackPrompt'
+import LayeredMessage from '../../components/chat/LayeredMessage'
 import { categories, categoryIds, getCategory, type CategoryDefinition, type CategoryId } from '../../data/categories'
 import { classifyRequest, type ClassificationResult } from '../../lib/classifyRequest'
 import { callPriceFor, eligibleTiersFor, lowestPriceFor, recommendTierFor, tiers, type ExpertTierId, type TierDefinition } from '../../data/tiers'
@@ -1557,7 +1558,7 @@ function ChatScreen({
   const [input, setInput] = useState('')
   const messagesRef = useRef<HTMLDivElement>(null)
   const expert = category.expert
-  const [messages, setMessages] = useState<{ from: 'user' | 'expert'; text: string }[]>([
+  const [messages, setMessages] = useState<{ from: 'user' | 'expert'; text: string; info?: string }[]>([
     {
       from: 'user',
       text: expert.clientMessage,
@@ -1565,6 +1566,7 @@ function ChatScreen({
     {
       from: 'expert',
       text: expert.expertMessage,
+      info: expert.expertInfo,
     },
   ])
 
@@ -1685,6 +1687,12 @@ function ChatScreen({
               </div>
             )}
 
+            {msg.info ? (
+              <div className="max-w-[86%]">
+                <LayeredMessage advice={msg.text} info={msg.info} expertFirstName={expert.firstName} tone="received" />
+                <p className="text-[10px] mt-1.5" style={{ color: 'var(--color-slate-600)' }}>14:24 · {expert.firstName}</p>
+              </div>
+            ) : (
             <div
               className={`max-w-[82%] rounded-2xl px-4 py-3 text-[13px] leading-[1.65] ${
                 msg.from === 'user' ? 'rounded-br-md' : 'rounded-bl-md'
@@ -1705,6 +1713,7 @@ function ChatScreen({
                 {msg.from === 'user' ? '14:23 · Sent' : `14:24 · ${expert.firstName}`}
               </p>
             </div>
+            )}
           </div>
         ))}
 

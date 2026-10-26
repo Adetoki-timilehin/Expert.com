@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import AppShell from '../../components/layout/AppShell'
+import LayeredMessage from '../../components/chat/LayeredMessage'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-
-type ConfidenceTag = 'accurate' | 'modified' | 'replaced'
 
 type ExpertScreen =
   | 'home'
@@ -50,12 +49,13 @@ type HistoryItem = {
   format: 'Chat' | 'Call'
 }
 
-type ChatMessage = { from: 'client' | 'expert'; text: string }
+type ChatMessage = { from: 'client' | 'expert'; text: string; info?: string }
 
 // ─── Dummy data ──────────────────────────────────────────────────────────────
 
 const EXPERT = {
   name: 'Alex Chen',
+  firstName: 'Alex',
   tier: 'Senior Verified Professional',
   category: 'Legal & Immigration',
   rating: 4.9,
@@ -177,25 +177,15 @@ const HISTORY_ITEMS: HistoryItem[] = [
   },
 ]
 
-// ─── AI draft content ─────────────────────────────────────────────────────────
+// ─── AI-prepared general information ─────────────────────────────────────────
 
-const INITIAL_DRAFT = `The key distinction here is that "at risk" is not a notice of termination — you remain employed. Under the Employment Rights Act 1996, your three years of continuous employment gives you enhanced redundancy rights, and being the only person selected for this conversation warrants scrutiny of the selection criteria being used.
+const INITIAL_INFO = `Being told your role is "at risk" is not a notice of termination — you remain employed. Before any dismissal, your employer is expected to follow a fair process, including genuine consultation and objective selection criteria.
 
-On your visa: the 60-day grace period only starts when employment formally ends — not now. With permanent residence 18 months away, you have time to act carefully rather than reactively.
-
-[your assessment of whether the facts as described suggest unfair selection, and what that realistically means for their position]
-
-My immediate recommendation: [your specific advice for what they should do in the next 24–48 hours].`
+If sponsorship of a Skilled Worker visa ends, the visa is usually shortened to 60 days (or left at its existing expiry if that is sooner). That period starts when employment ends, not when you are told you are at risk.`
 
 const FOLLOW_UP_CLIENT = "That's really helpful. Should I put something in writing to my employer now, or wait until they formally give me notice?"
 
-const FOLLOW_UP_DRAFT = `I would advise against waiting. Send a written follow-up to your manager today, formally requesting written confirmation of what was discussed, the reason for the 'at risk' status, and the selection criteria being used.
-
-This starts your paper trail and signals you are aware of your rights — which often changes the tone of the process.
-
-[your professional opinion on whether this situation warrants seeking independent legal representation at this stage, and if so, what kind of solicitor they should look for]
-
-Do not resign under any circumstance — it would undermine any future claim.`
+const FOLLOW_UP_INFO = `ACAS guidance expects employers to consult with employees at risk of redundancy and explain how they were selected. Written requests create a record you can rely on later. Resigning, rather than being dismissed, can remove the ability to bring an unfair dismissal claim.`
 
 const INITIAL_CHAT: ChatMessage[] = [
   {
@@ -204,23 +194,11 @@ const INITIAL_CHAT: ChatMessage[] = [
   },
   {
     from: 'expert',
-    text: "Thank you for getting in touch. This is an important situation and I want to make sure I understand it fully before giving you any guidance.",
-  },
-  {
-    from: 'expert',
-    text: "A few questions to start: has your employer given you formal written notice of termination, or is this currently verbal? And is the threat linked to any specific reason — redundancy, performance, or something else?",
+    text: "Thank you for getting in touch. A few questions before I advise: has your employer given you formal written notice, or is this verbal so far? And is it linked to a specific reason — redundancy, performance, or something else?",
   },
   {
     from: 'client',
     text: "It's been verbal so far — my manager told me in a meeting yesterday that my position is 'at risk'. Nothing in writing yet. They mentioned budget cuts but I'm the only person in my team being told this.",
-  },
-  {
-    from: 'expert',
-    text: "That distinction matters here. 'At risk' is not the same as a termination notice — you are still employed and have not yet been formally dismissed. That gives you important options.",
-  },
-  {
-    from: 'expert',
-    text: "On the visa side: your Skilled Worker visa is tied to your current sponsor, so if your employment ends you would normally need to either find a new sponsor within 60 days or leave the UK. However, that clock only starts once employment actually ends — not when you're placed 'at risk'.",
   },
 ]
 
@@ -652,75 +630,42 @@ function RequestDetailScreen({
 
 // ─── ConsultationScreen ───────────────────────────────────────────────────────
 
-const TAG_OPTIONS: { value: ConfidenceTag; label: string; sub: string }[] = [
-  { value: 'accurate', label: 'Sending as-is', sub: 'I reviewed this and confirm it is accurate' },
-  { value: 'modified', label: 'Modified', sub: 'I edited the draft before sending' },
-]
-
 function ConsultationScreen({
   messages,
-  draft,
-  draftLoadedAt,
+  draftInfo,
   clientTyping,
-  onSendDraft,
+  onSend,
   onComplete,
   onBack,
 }: {
   messages: ChatMessage[]
-  draft: string | null
-  draftLoadedAt: number
+  draftInfo: string | null
   clientTyping: boolean
-  onSendDraft: (text: string, tag: ConfidenceTag) => void
+  onSend: (advice: string, info: string | null) => void
   onComplete: () => void
   onBack: () => void
 }) {
   const listRef = useRef<HTMLDivElement>(null)
-  const [draftText, setDraftText] = useState(draft ?? '')
-  const [confidenceTag, setConfidenceTag] = useState<ConfidenceTag | null>(null)
-  const [draftDismissed, setDraftDismissed] = useState(false)
-  const [freeInput, setFreeInput] = useState('')
-  const [, setTick] = useState(0)
+  const [advice, setAdvice] = useState('')
+  const [info, setInfo] = useState(draftInfo ?? '')
+  const [includeInfo, setIncludeInfo] = useState(draftInfo !== null)
 
-  // Sync draft text and reset state when a new draft arrives
   useEffect(() => {
-    if (draft !== null) {
-      setDraftText(draft)
-      setConfidenceTag(null)
-      setDraftDismissed(false)
-    }
-  }, [draft])
-
-  // Tick every second so elapsed time display stays live
-  useEffect(() => {
-    const t = setInterval(() => setTick((n) => n + 1), 1000)
-    return () => clearInterval(t)
-  }, [])
+    setInfo(draftInfo ?? '')
+    setIncludeInfo(draftInfo !== null)
+  }, [draftInfo])
 
   useEffect(() => {
     const list = listRef.current
     if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' })
   }, [messages, clientTyping])
 
-  const tokenMatches = draftText.match(/\[[^\]]+\]/g) ?? []
-  const tokensRemaining = tokenMatches.length
-  const draftReady = tokensRemaining === 0
+  const hasInfo = draftInfo !== null && includeInfo && info.trim().length > 0
 
-  const elapsed = Math.floor((Date.now() - draftLoadedAt) / 1000)
-  const elapsedLabel = elapsed < 5 ? 'just now' : elapsed < 60 ? `${elapsed}s ago` : `${Math.floor(elapsed / 60)}m ago`
-
-  const showDraftPanel = draft !== null && !draftDismissed
-
-  function handleDraftChange(v: string) {
-    setDraftText(v)
-    // Auto-switch to 'modified' if they've changed the text
-    if (confidenceTag === 'accurate' && v !== draft) setConfidenceTag('modified')
-  }
-
-  function handleSendFree() {
-    if (!freeInput.trim()) return
-    onSendDraft(freeInput.trim(), 'replaced')
-    setFreeInput('')
-    setDraftDismissed(false)
+  function send() {
+    if (!advice.trim()) return
+    onSend(advice.trim(), hasInfo ? info.trim() : null)
+    setAdvice('')
   }
 
   return (
@@ -759,15 +704,21 @@ function ConsultationScreen({
       <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-5 space-y-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'expert' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className="max-w-[84%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed"
-              style={{
-                background: msg.from === 'expert' ? 'var(--color-accent)' : 'var(--color-slate-900)',
-                color: msg.from === 'expert' ? 'white' : 'var(--color-slate-200)',
-              }}
-            >
-              {msg.text}
-            </div>
+            {msg.info ? (
+              <div className="max-w-[88%]">
+                <LayeredMessage advice={msg.text} info={msg.info} expertFirstName={EXPERT.firstName} tone="sent" />
+              </div>
+            ) : (
+              <div
+                className="max-w-[84%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed"
+                style={{
+                  background: msg.from === 'expert' ? 'var(--color-accent)' : 'var(--color-slate-900)',
+                  color: msg.from === 'expert' ? 'white' : 'var(--color-slate-200)',
+                }}
+              >
+                {msg.text}
+              </div>
+            )}
           </div>
         ))}
         {clientTyping && (
@@ -785,153 +736,77 @@ function ConsultationScreen({
         )}
       </div>
 
-      {/* Draft panel */}
-      {showDraftPanel && (
-        <div className="flex-shrink-0 border-t" style={{ borderColor: 'var(--color-slate-700)', background: 'var(--color-ground-base)' }}>
-          {/* Draft header */}
-          <div
-            className="flex items-center justify-between px-4 py-2"
-            style={{ background: 'var(--color-accent-soft)', borderBottom: '1px solid var(--color-accent-border)' }}
-          >
-            <div className="flex items-center gap-2">
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-                <path d="M6.5 1L8 4.5H12L9 7l1 4-3.5-2.2L3 11l1-4-3-2.5H5.5z" fill="var(--color-accent)" />
-              </svg>
-              <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-accent-text)' }}>AI Draft</span>
-            </div>
-            <span className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>Loaded {elapsedLabel}</span>
-          </div>
-
-          <div className="px-4 pt-3 pb-2">
-            {/* Editable draft */}
-            <textarea
-              value={draftText}
-              onChange={(e) => handleDraftChange(e.target.value)}
-              rows={5}
-              className="w-full rounded-xl px-3 py-2.5 text-[12px] leading-relaxed resize-none outline-none"
-              style={{
-                background: 'var(--color-slate-900)',
-                color: 'var(--color-slate-100)',
-                border: `1px solid ${tokensRemaining > 0 ? 'var(--color-slate-600)' : 'var(--color-accent-border)'}`,
-              }}
-            />
-
-            {/* Token status */}
-            <div className="flex items-center gap-1.5 mt-1.5 mb-3">
-              {tokensRemaining > 0 ? (
-                <>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                    <circle cx="6" cy="6" r="5" stroke="#c0472e" strokeWidth="1.2" />
-                    <path d="M6 4v3M6 8.5v.5" stroke="#c0472e" strokeWidth="1.2" strokeLinecap="round" />
-                  </svg>
-                  <span className="text-[10px]" style={{ color: '#c0472e' }}>
-                    {tokensRemaining} token{tokensRemaining > 1 ? 's' : ''} remaining — replace all <span className="font-mono">[bracketed text]</span> with case-specific details
-                  </span>
-                </>
-              ) : (
-                <>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                    <circle cx="6" cy="6" r="5" stroke="var(--color-accent)" strokeWidth="1.2" />
-                    <path d="M4 6l1.5 1.5 2.5-3" stroke="var(--color-accent)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <span className="text-[10px]" style={{ color: 'var(--color-accent-text)' }}>All tokens resolved — confirm before sending</span>
-                </>
-              )}
-            </div>
-
-            {/* Confidence tag — only shown when draft is ready */}
-            {draftReady && (
-              <div className="mb-3">
-                <p className="text-[10px] mb-2" style={{ color: 'var(--color-slate-400)' }}>How did you use this draft?</p>
-                <div className="flex gap-2">
-                  {TAG_OPTIONS.map((opt) => {
-                    const selected = confidenceTag === opt.value
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setConfidenceTag(opt.value)}
-                        className="flex-1 rounded-xl px-3 py-2 text-left border transition-colors"
-                        style={{
-                          background: selected ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
-                          borderColor: selected ? 'var(--color-accent-border)' : 'var(--color-slate-700)',
-                        }}
-                      >
-                        <span className="block text-[10px] font-semibold" style={{ color: selected ? 'var(--color-accent-text)' : 'var(--color-slate-200)' }}>{opt.label}</span>
-                        <span className="block text-[9px] mt-0.5 leading-tight" style={{ color: 'var(--color-slate-600)' }}>{opt.sub}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center gap-3 pb-1">
+      {/* Composer */}
+      <div className="flex-shrink-0 border-t px-4 pt-3 pb-3 space-y-2.5" style={{ borderColor: 'var(--color-slate-700)', background: 'var(--color-ground-base)' }}>
+        {draftInfo !== null && includeInfo && (
+          <div className="rounded-xl border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+            <div className="flex items-center justify-between px-3 pt-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-slate-400)' }}>
+                General information · AI-prepared
+              </span>
               <button
                 type="button"
-                onClick={() => onSendDraft(draftText, confidenceTag!)}
-                disabled={!draftReady || !confidenceTag}
-                className="flex-1 min-h-10 rounded-xl text-[12px] font-semibold text-white disabled:opacity-40 transition-opacity"
-                style={{ background: 'var(--color-accent)' }}
-              >
-                Send response
-              </button>
-              <button
-                type="button"
-                onClick={() => { setDraftDismissed(true); setConfidenceTag(null) }}
-                className="text-[11px] font-semibold px-2"
+                onClick={() => setIncludeInfo(false)}
+                className="text-[10px] font-semibold"
                 style={{ color: 'var(--color-slate-400)' }}
               >
-                Write my own
+                Remove
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Free-type input — shown when draft dismissed or no draft */}
-      {!showDraftPanel && (
-        <div className="flex-shrink-0 border-t" style={{ borderColor: 'var(--color-slate-700)', background: 'var(--color-ground-base)' }}>
-          {draft !== null && (
-            <button
-              type="button"
-              onClick={() => setDraftDismissed(false)}
-              className="w-full py-2 text-[10px] font-semibold border-b"
-              style={{ color: 'var(--color-accent-text)', borderColor: 'var(--color-slate-700)', background: 'var(--color-slate-900)' }}
-            >
-              ← Use AI draft instead
-            </button>
-          )}
-          <div className="flex gap-2 px-4 py-3">
-            <input
-              value={freeInput}
-              onChange={(e) => setFreeInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendFree()}
-              placeholder="Write your own reply…"
-              aria-label="Write your own reply"
-              className="flex-1 min-w-0 h-11 rounded-2xl px-4 outline-none text-[13px]"
-              style={{
-                background: 'var(--color-ground-deep)',
-                color: 'var(--color-slate-100)',
-                border: '1px solid var(--color-slate-700)',
-              }}
+            <textarea
+              value={info}
+              onChange={(e) => setInfo(e.target.value)}
+              rows={3}
+              aria-label="AI-prepared general information"
+              className="w-full px-3 pt-1.5 pb-2.5 text-[11px] leading-relaxed resize-none outline-none bg-transparent"
+              style={{ color: 'var(--color-slate-200)' }}
             />
-            <button
-              type="button"
-              onClick={handleSendFree}
-              disabled={!freeInput.trim()}
-              aria-label="Send message"
-              className="w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-40"
-              style={{ background: 'var(--color-accent)' }}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M14 8L2 2l3 6-3 6z" fill="white" />
-              </svg>
-            </button>
           </div>
+        )}
+        {draftInfo !== null && !includeInfo && (
+          <button
+            type="button"
+            onClick={() => setIncludeInfo(true)}
+            className="text-[10px] font-semibold"
+            style={{ color: 'var(--color-accent-text)' }}
+          >
+            + Include AI-prepared general information
+          </button>
+        )}
+
+        <div className="flex items-end gap-2">
+          <textarea
+            value={advice}
+            onChange={(e) => setAdvice(e.target.value)}
+            rows={hasInfo ? 3 : 1}
+            placeholder={hasInfo ? 'Your advice for this client — appears under your name' : 'Reply to the client…'}
+            aria-label="Your advice"
+            className="flex-1 min-w-0 rounded-2xl px-4 py-3 outline-none text-[13px] leading-relaxed resize-none"
+            style={{
+              background: 'var(--color-ground-deep)',
+              color: 'var(--color-slate-100)',
+              border: '1px solid var(--color-slate-700)',
+            }}
+          />
+          <button
+            type="button"
+            onClick={send}
+            disabled={!advice.trim()}
+            aria-label="Send message"
+            className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-40"
+            style={{ background: 'var(--color-accent)' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M14 8L2 2l3 6-3 6z" fill="white" />
+            </svg>
+          </button>
         </div>
-      )}
+        {hasInfo && (
+          <p className="text-[10px] leading-relaxed" style={{ color: 'var(--color-slate-600)' }}>
+            The client sees your advice first, with the general information below it, labelled as AI-prepared and checked by you.
+          </p>
+        )}
+      </div>
     </div>
   )
 }
@@ -1265,8 +1140,7 @@ export default function ExpertDashboard() {
   const [consultationComplete, setConsultationComplete] = useState(false)
   const [acceptedPayout, setAcceptedPayout] = useState(0)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT)
-  const [draft, setDraft] = useState<string | null>(null)
-  const [draftLoadedAt, setDraftLoadedAt] = useState(0)
+  const [draftInfo, setDraftInfo] = useState<string | null>(null)
   const [clientTyping, setClientTyping] = useState(false)
   const [followUpSent, setFollowUpSent] = useState(false)
   const [activeCalls, setActiveCalls] = useState<DummyCall[]>(DUMMY_CALLS)
@@ -1295,8 +1169,7 @@ export default function ExpertDashboard() {
     setAcceptedPayout(selectedRequest.payout)
     setPendingRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id))
     setConsultationActive(true)
-    setDraft(INITIAL_DRAFT)
-    setDraftLoadedAt(Date.now())
+    setDraftInfo(INITIAL_INFO)
     setScreen('consultation')
   }
 
@@ -1326,9 +1199,9 @@ export default function ExpertDashboard() {
     setScreen('consultation') // will show the complete screen
   }
 
-  function handleSendDraft(text: string) {
-    setChatMessages((prev) => [...prev, { from: 'expert', text }])
-    setDraft(null)
+  function handleSend(advice: string, info: string | null) {
+    setChatMessages((prev) => [...prev, info ? { from: 'expert', text: advice, info } : { from: 'expert', text: advice }])
+    setDraftInfo(null)
     if (!followUpSent) {
       setFollowUpSent(true)
       setTimeout(() => setClientTyping(true), 2500)
@@ -1337,8 +1210,7 @@ export default function ExpertDashboard() {
         setChatMessages((prev) => [...prev, { from: 'client', text: FOLLOW_UP_CLIENT }])
       }, 4500)
       setTimeout(() => {
-        setDraft(FOLLOW_UP_DRAFT)
-        setDraftLoadedAt(Date.now())
+        setDraftInfo(FOLLOW_UP_INFO)
       }, 5000)
     }
   }
@@ -1409,10 +1281,9 @@ export default function ExpertDashboard() {
         {screen === 'consultation' && !consultationComplete && (
           <ConsultationScreen
             messages={chatMessages}
-            draft={draft}
-            draftLoadedAt={draftLoadedAt}
+            draftInfo={draftInfo}
             clientTyping={clientTyping}
-            onSendDraft={handleSendDraft}
+            onSend={handleSend}
             onComplete={handleCompleteConsultation}
             onBack={() => setScreen('home')}
           />
