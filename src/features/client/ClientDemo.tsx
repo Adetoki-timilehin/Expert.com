@@ -146,6 +146,7 @@ export default function ClientDemo() {
               const result = classifyRequest(query, nextCategory)
               setClassification(result)
               setCategoryId(result.categoryId)
+              setSelectedTierId(recommendTierFor(result.categoryId, result.gravity))
               setScreen('intake')
             }}
           />
@@ -156,8 +157,10 @@ export default function ClientDemo() {
             categoryId={categoryId}
             question={requestText}
             onSelectCategory={(nextCategory) => {
+              const result = classifyRequest(requestText, nextCategory)
               setCategoryId(nextCategory)
-              setClassification(classifyRequest(requestText, nextCategory))
+              setClassification(result)
+              setSelectedTierId(recommendTierFor(nextCategory, result.gravity))
             }}
             onBack={() => setScreen('landing')}
             onNext={() => setScreen('pricing')}
