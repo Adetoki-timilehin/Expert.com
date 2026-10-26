@@ -28,7 +28,7 @@ const highStakesCategories = new Set<CategoryId>(['medical', 'legal', 'immigrati
 
 const elevatedGravityTerms = [
   // urgency
-  'emergency', 'urgent', 'immediately', 'asap', 'right now', 'today', 'crisis',
+  'emergency', 'urgent', 'immediately', 'asap', 'right now', 'crisis',
   // severity
   'severe', 'serious', 'critical', 'significant', 'major', 'life-changing',
   // legal/financial severity
