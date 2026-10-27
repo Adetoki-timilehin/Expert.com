@@ -1661,7 +1661,10 @@ export default function ExpertDashboard() {
   }, [crossTier])
 
   // Lower-tier bookings are only offered to experts who opted in
-  const visibleRequests = crossTier ? pendingRequests : pendingRequests.filter((r) => r.tier === EXPERT.tier)
+  // Elevated gravity first, then higher payout, so the home preview shows the request most worth opening
+  const visibleRequests = (crossTier ? pendingRequests : pendingRequests.filter((r) => r.tier === EXPERT.tier)).slice().sort(
+    (a, b) => Number(b.urgency === 'Elevated') - Number(a.urgency === 'Elevated') || b.payout - a.payout
+  )
   const hiddenCount = pendingRequests.length - visibleRequests.length
 
   const selectedRequest = pendingRequests.find((r) => r.id === selectedRequestId) ?? null
