@@ -4,6 +4,7 @@ import FeedbackPrompt from '../../components/feedback/FeedbackPrompt'
 import { categories, categoryIds, getCategory, type CategoryDefinition, type CategoryId } from '../../data/categories'
 import { classifyRequest, type ClassificationResult } from '../../lib/classifyRequest'
 import { callPriceFor, eligibleTiersFor, lowestPriceFor, recommendTierFor, tiers, type ExpertTierId, type TierDefinition } from '../../data/tiers'
+import { chatTotalFor, expertPayoutFor, expertBonusFor, priorityAvailable, recommendUrgencyFor, urgencyLevels, type UrgencyId } from '../../data/urgency'
 import { generateSlots, groupSlotsByDay, type CallSlot } from '../../data/availability'
 
 /*
@@ -63,6 +64,12 @@ export default function ClientDemo() {
     const result = classifyRequest(storedRequest, catId)
     return recommendTierFor(result.categoryId, result.gravity)
   })
+  const [urgencyChoice, setUrgencyChoice] = useState<UrgencyId>(() => {
+    const saved = localStorage.getItem('specialist.client.urgency')
+    const savedScreen = localStorage.getItem('specialist.client.screen')
+    // Standard is always the default; a saved Priority choice only survives mid-flow
+    return saved === 'priority' && savedScreen && savedScreen !== 'landing' && savedScreen !== 'intake' ? 'priority' : 'standard'
+  })
   const [consultationComplete, setConsultationComplete] = useState(
     () => localStorage.getItem('specialist.client.consultationComplete') === 'true'
       || localStorage.getItem('specialist.consultation.status') === 'completed'
@@ -90,6 +97,12 @@ export default function ClientDemo() {
     upcomingSlots[0] ??
     null
   const category = getCategory(categoryId)
+  // Priority is not offered in crisis-sensitive cases; fall back to Standard if it becomes unavailable
+  const urgencyId: UrgencyId = urgencyChoice === 'priority' && priorityAvailable(categoryId, classification) ? 'priority' : 'standard'
+
+  useEffect(() => {
+    localStorage.setItem('specialist.client.urgency', urgencyId)
+  }, [urgencyId])
 
   useEffect(() => {
     localStorage.setItem('specialist.client.screen', screen)
@@ -152,6 +165,7 @@ export default function ClientDemo() {
               setClassification(result)
               setCategoryId(result.categoryId)
               setSelectedTierId(recommendTierFor(result.categoryId, result.gravity))
+              setUrgencyChoice('standard')
               // Clear per-consultation state so it doesn't bleed into the new flow
               setConsultationComplete(false)
               setChatReturnScreen('match')
@@ -182,7 +196,9 @@ export default function ClientDemo() {
             categoryId={categoryId}
             classification={classification}
             tierId={selectedTierId}
+            urgencyId={urgencyId}
             onTierChange={setSelectedTierId}
+            onUrgencyChange={setUrgencyChoice}
             onNext={() => setScreen('matching')}
           />
         )}
@@ -197,6 +213,7 @@ export default function ClientDemo() {
           <MatchConfirmationScreen
             category={category}
             tierId={selectedTierId}
+            urgencyId={urgencyId}
             onRematch={() => setScreen('matching')}
             onStartChat={() => {
               setChatReturnScreen('match')
@@ -276,6 +293,7 @@ export default function ClientDemo() {
           <ConsultationCompleteScreen
             category={category}
             tierId={selectedTierId}
+            urgencyId={urgencyId}
             onHistory={() => setScreen('history')}
             onHome={() => setScreen('landing')}
           />
@@ -284,6 +302,7 @@ export default function ClientDemo() {
           <ConsultationHistoryScreen
             category={category}
             tierId={selectedTierId}
+            urgencyId={urgencyId}
             complete={consultationComplete}
             upcomingSlots={upcomingSlots}
             onOpen={() => {
@@ -1045,23 +1064,30 @@ function PricingScreen({
   categoryId,
   classification,
   tierId,
+  urgencyId,
   onTierChange,
+  onUrgencyChange,
   onNext,
 }: {
   category: CategoryDefinition
   categoryId: CategoryId
   classification: ClassificationResult
   tierId: ExpertTierId
+  urgencyId: UrgencyId
   onTierChange: (tierId: ExpertTierId) => void
+  onUrgencyChange: (urgencyId: UrgencyId) => void
   onNext: () => void
 }) {
   const [agreed, setAgreed] = useState(false)
   const [showBreakdown, setShowBreakdown] = useState(false)
   const [showTierPicker, setShowTierPicker] = useState(false)
   const tier = tiers[tierId]
-  const vatAmount = +(tier.price - tier.price / 1.2).toFixed(2)
-  const platformFee = +(tier.price / 1.2 - tier.expertPayout).toFixed(2)
+  const total = chatTotalFor(tier, urgencyId)
+  const vatAmount = +(total - total / 1.2).toFixed(2)
+  const platformFee = +(total / 1.2 - expertPayoutFor(tier, urgencyId)).toFixed(2)
   const recommendedId = recommendTierFor(categoryId, classification.gravity)
+  const urgencySuggestion = recommendUrgencyFor(categoryId, classification)
+  const showUrgency = priorityAvailable(categoryId, classification)
   const eligible = eligibleTiersFor(categoryId)
 
   return (
@@ -1112,6 +1138,58 @@ function PricingScreen({
         )}
       </div>
 
+      {/* Response speed */}
+      {showUrgency && (
+        <div className="mb-5" role="radiogroup" aria-label="Response speed">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--color-slate-400)' }}>
+            Response speed
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {(['standard', 'priority'] as UrgencyId[]).map((id) => {
+              const level = urgencyLevels[id]
+              const active = urgencyId === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => onUrgencyChange(id)}
+                  className="rounded-2xl border p-3.5 text-left"
+                  style={{
+                    background: active ? 'var(--color-accent-soft)' : 'var(--color-slate-900)',
+                    borderColor: active ? 'var(--color-accent)' : 'var(--color-slate-700)',
+                  }}
+                >
+                  <span className="flex items-center justify-between">
+                    <span className="text-[13px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{level.name}</span>
+                    <span className="text-[12px] font-semibold" style={{ color: active ? 'var(--color-accent-text)' : 'var(--color-slate-400)' }}>
+                      {level.addOn > 0 ? `+£${level.addOn}` : 'Included'}
+                    </span>
+                  </span>
+                  <span className="block text-[10px] leading-snug mt-1.5" style={{ color: 'var(--color-slate-400)' }}>
+                    {id === 'standard' ? tier.responseTime : 'Front of the queue · reply within 2 min'}
+                  </span>
+                  {urgencySuggestion.id === id && id !== 'standard' && (
+                    <span className="block text-[10px] font-semibold mt-1.5" style={{ color: 'var(--color-accent-text)' }}>Recommended</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          {urgencySuggestion.id === 'priority' && urgencySuggestion.reason && (
+            <p className="text-[11px] leading-snug mt-2" style={{ color: 'var(--color-slate-400)' }}>
+              {urgencySuggestion.reason}. Priority is optional.
+            </p>
+          )}
+          {urgencyId === 'priority' && (
+            <p className="text-[11px] leading-snug mt-2" style={{ color: 'var(--color-slate-400)' }}>
+              {urgencyLevels.priority.promise}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Price card */}
       <div
         className="rounded-3xl p-6 mb-5 border"
@@ -1124,7 +1202,7 @@ function PricingScreen({
             </p>
             <div className="flex items-baseline gap-1.5">
               <span className="font-display text-[52px] text-[var(--color-slate-100)] leading-none">
-                £{tier.price}
+                £{total}
               </span>
               <span className="text-[13px]" style={{ color: 'var(--color-slate-400)' }}>inc. VAT</span>
             </div>
@@ -1140,6 +1218,12 @@ function PricingScreen({
             </svg>
           </div>
         </div>
+
+        {urgencyId === 'priority' && (
+          <p className="text-[11px] mb-3 leading-snug" style={{ color: 'var(--color-slate-400)' }}>
+            £{tier.price} consultation + £{urgencyLevels.priority.addOn} Priority
+          </p>
+        )}
 
         {/* Call upgrade note */}
         {tier.callPrice && (
@@ -1180,6 +1264,7 @@ function PricingScreen({
           <div className="space-y-2.5 pt-3 border-t" style={{ borderColor: 'var(--color-slate-800)' }}>
             {[
               { label: `Expert ${tier.name} (up to 30 min)`, value: `£${tier.expertPayout.toFixed(2)}` },
+              ...(urgencyId === 'priority' ? [{ label: 'Expert Priority bonus', value: `£${expertBonusFor(urgencyId).toFixed(2)}` }] : []),
               { label: 'Platform fee',                        value: `£${platformFee.toFixed(2)}` },
               { label: 'VAT (20%)',                           value: `£${vatAmount.toFixed(2)}` },
             ].map((row) => (
@@ -1193,7 +1278,7 @@ function PricingScreen({
               style={{ borderColor: 'var(--color-slate-800)' }}
             >
               <span className="text-[13px] font-semibold text-[var(--color-slate-100)]">Total (charged at match)</span>
-              <span className="text-[15px] font-bold" style={{ color: 'var(--color-logo-wordmark)' }}>£{tier.price.toFixed(2)}</span>
+              <span className="text-[15px] font-bold" style={{ color: 'var(--color-logo-wordmark)' }}>£{total.toFixed(2)}</span>
             </div>
           </div>
         )}
@@ -1275,7 +1360,7 @@ function PricingScreen({
           )}
         </div>
         <p className="text-[12px] leading-[1.55]" style={{ color: 'var(--color-slate-400)' }}>
-          I authorise Peasy to hold £{tier.price.toFixed(2)} on my card. Nothing is charged until I confirm my matched expert. I have read and agree to the{' '}
+          I authorise Peasy to hold £{total.toFixed(2)} on my card. Nothing is charged until I confirm my matched expert. I have read and agree to the{' '}
           <span className="underline" style={{ color: 'var(--color-logo-wordmark)' }}>Terms of Service</span> and{' '}
           <span className="underline" style={{ color: 'var(--color-logo-wordmark)' }}>Privacy Policy</span>.
         </p>
@@ -1286,7 +1371,7 @@ function PricingScreen({
           <rect x="2" y="6" width="12" height="9" rx="2" stroke="white" strokeWidth="1.6"/>
           <path d="M5 6V4.5a3 3 0 016 0V6" stroke="white" strokeWidth="1.6"/>
         </svg>
-        Find my expert · £{tier.price} held
+        Find my expert · £{total} held
       </AccentBtn>
       <p className="text-center text-[11px] mt-3" style={{ color: 'var(--color-slate-600)' }}>
         Secured by Stripe · 256-bit TLS encryption
@@ -1404,18 +1489,21 @@ function MatchingScreen({
 function MatchConfirmationScreen({
   category,
   tierId,
+  urgencyId,
   onRematch,
   onStartChat,
   onScheduleCall,
 }: {
   category: CategoryDefinition
   tierId: ExpertTierId
+  urgencyId: UrgencyId
   onRematch: () => void
   onStartChat: () => void
   onScheduleCall: () => void
 }) {
   const expert = category.expert
   const tier = tiers[tierId]
+  const total = chatTotalFor(tier, urgencyId)
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
@@ -1455,7 +1543,7 @@ function MatchConfirmationScreen({
             <path d="M5.5 1L3 2.5v3c0 2.5 1.5 4 2.5 4s2.5-1.5 2.5-4v-3L5.5 1z" stroke="var(--color-slate-600)" strokeWidth="1"/>
           </svg>
           <span className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>
-            Matched as: <strong style={{ color: 'var(--color-slate-200)' }}>{tier.name}</strong> · £{tier.price}
+            Matched as: <strong style={{ color: 'var(--color-slate-200)' }}>{tier.name}</strong>{urgencyId === 'priority' ? ' · Priority' : ''} · £{total}
           </span>
         </div>
 
@@ -1500,7 +1588,7 @@ function MatchConfirmationScreen({
           <span className="text-white text-[9px] font-black tracking-tight">VISA</span>
         </div>
         <p className="text-[12px] leading-snug text-[var(--color-slate-100)]">
-          Confirming will charge <strong>£{tier.price}</strong> to your Visa ending 4242.
+          Confirming will charge <strong>£{total}</strong> to your Visa ending 4242.
         </p>
       </div>
 
@@ -1512,7 +1600,7 @@ function MatchConfirmationScreen({
         Request another match
       </button>
       <AccentBtn onClick={onStartChat}>
-        Confirm &amp; pay £{tier.price} · Start chat
+        Confirm &amp; pay £{total} · Start chat
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <rect x="2" y="6" width="12" height="9" rx="2" stroke="white" strokeWidth="1.6"/>
           <path d="M5 6V4.5a3 3 0 016 0V6" stroke="white" strokeWidth="1.6"/>
@@ -1793,11 +1881,13 @@ function ChatScreen({
 function ConsultationCompleteScreen({
   category,
   tierId,
+  urgencyId,
   onHistory,
   onHome,
 }: {
   category: CategoryDefinition
   tierId: ExpertTierId
+  urgencyId: UrgencyId
   onHistory: () => void
   onHome: () => void
 }) {
@@ -1865,9 +1955,15 @@ function ConsultationCompleteScreen({
             <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Consultation fee</span>
             <span className="text-[12px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>£{tier.price.toFixed(2)}</span>
           </div>
+          {urgencyId === 'priority' && (
+            <div className="flex items-center justify-between">
+              <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Priority</span>
+              <span className="text-[12px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>£{urgencyLevels.priority.addOn.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Expert payout</span>
-            <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>£{tier.expertPayout.toFixed(2)}</span>
+            <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>£{expertPayoutFor(tier, urgencyId).toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -1910,6 +2006,7 @@ function ConsultationCompleteScreen({
 function ConsultationHistoryScreen({
   category,
   tierId,
+  urgencyId,
   complete,
   upcomingSlots,
   onOpen,
@@ -1918,6 +2015,7 @@ function ConsultationHistoryScreen({
 }: {
   category: CategoryDefinition
   tierId: ExpertTierId
+  urgencyId: UrgencyId
   complete: boolean
   upcomingSlots: CallSlot[]
   onOpen: () => void
@@ -1926,6 +2024,7 @@ function ConsultationHistoryScreen({
 }) {
   const expert = category.expert
   const tier = tiers[tierId]
+  const total = chatTotalFor(tier, urgencyId)
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-8 animate-fade-in">
@@ -1973,7 +2072,7 @@ function ConsultationHistoryScreen({
         </span>
         <TierBadge tierId={tierId} size="md" />
         <span className="rounded-full px-3 py-1.5 text-[11px] font-medium bg-[var(--color-slate-800)] text-[var(--color-slate-400)]">
-          £{tier.price} consultation
+          £{total} consultation{urgencyId === 'priority' ? ' · Priority' : ''}
         </span>
       </div>
 
@@ -1996,7 +2095,7 @@ function ConsultationHistoryScreen({
           {complete ? category.consultationSummary : `Your secure consultation with ${expert.firstName} is active.`}
         </span>
         <span className="flex items-center justify-between pt-3 border-t border-[var(--color-slate-700)]">
-          <span className="text-[10px] text-[var(--color-slate-600)]">Today · £{tier.price.toFixed(2)}</span>
+          <span className="text-[10px] text-[var(--color-slate-600)]">Today · £{total.toFixed(2)}</span>
           <span className="text-[11px] font-semibold text-[var(--color-accent-text)]">
             {complete ? 'View outcome' : 'Open chat'}
           </span>

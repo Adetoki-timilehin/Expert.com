@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import AppShell from '../../components/layout/AppShell'
+import { expertBonusFor, urgencyLevels } from '../../data/urgency'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -22,7 +23,9 @@ type DummyRequest = {
   tier: string
   payout: number
   receivedAgo: string
-  urgency: string
+  waitingMinutes: number
+  // Client paid for Priority: expert earns a bonus and should reply faster
+  priority: boolean
 }
 
 type DummyCall = {
@@ -92,7 +95,8 @@ const INITIAL_REQUESTS: DummyRequest[] = [
     tier: 'Verified Professional',
     payout: 17,
     receivedAgo: '14 min ago',
-    urgency: 'Standard',
+    waitingMinutes: 14,
+    priority: false,
   },
   {
     id: 'req-3',
@@ -102,7 +106,8 @@ const INITIAL_REQUESTS: DummyRequest[] = [
     tier: 'Senior Verified Professional',
     payout: 32,
     receivedAgo: '21 min ago',
-    urgency: 'Elevated',
+    waitingMinutes: 21,
+    priority: true,
   },
 ]
 
@@ -519,19 +524,24 @@ function CategoryBadge({ label }: { label: string }) {
   )
 }
 
-function UrgencyBadge({ level }: { level: string }) {
-  const elevated = level === 'Elevated'
+function PriorityBadge() {
   return (
     <span
       className="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold"
-      style={{
-        background: elevated ? 'rgba(180,60,40,0.12)' : 'var(--color-slate-800)',
-        color: elevated ? '#c0472e' : 'var(--color-slate-400)',
-      }}
+      style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent-text)' }}
     >
-      {level}
+      Priority
     </span>
   )
+}
+
+// Base tier payout plus the bonus when the client paid for Priority
+function requestPayout(req: DummyRequest): number {
+  return req.payout + (req.priority ? expertBonusFor('priority') : 0)
+}
+
+function responseTarget(req: DummyRequest): number {
+  return urgencyLevels[req.priority ? 'priority' : 'standard'].expertTargetMinutes
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -615,7 +625,7 @@ function ActiveConsultationCard({ consultation, onOpen }: { consultation: Consul
             <span className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-accent-text)' }}>New message</span>
           )}
         </div>
-        <span className="text-[12px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{consultation.payout}.00</span>
+        <span className="text-[12px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{consultation.payout.toFixed(2)}</span>
       </div>
       <p className="text-[12px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{status}</p>
       <p className="text-[11px] mt-1 line-clamp-1" style={{ color: 'var(--color-slate-400)' }}>{SCENARIOS[consultation.id].summary}</p>
@@ -773,14 +783,14 @@ function HomeScreen({
             <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-accent)' }} />
           </div>
           <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--color-slate-100)' }}>
-            {pendingRequests[0].category} — {pendingRequests[0].urgency} gravity
+            {pendingRequests[0].category}{pendingRequests[0].priority ? ' — Priority' : ''}
           </p>
           <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--color-slate-400)' }}>
             {pendingRequests[0].query}
           </p>
           <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid var(--color-accent-border)' }}>
             <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Payout</span>
-            <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{pendingRequests[0].payout}.00</span>
+            <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{requestPayout(pendingRequests[0]).toFixed(2)}</span>
           </div>
         </button>
       )}
@@ -872,7 +882,7 @@ function RequestsScreen({
 
       {requests.length > 0 && (
         <p className="text-[10px] uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>
-          Respond within 4 minutes to maintain response score
+          Respond within 4 minutes (2 for Priority) to maintain response score
         </p>
       )}
 
@@ -888,7 +898,7 @@ function RequestsScreen({
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <CategoryBadge label={req.category} />
-                <UrgencyBadge level={req.urgency} />
+                {req.priority && <PriorityBadge />}
               </div>
               <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--color-slate-600)' }}>{req.receivedAgo}</span>
             </div>
@@ -897,7 +907,7 @@ function RequestsScreen({
               <span className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>
                 {req.tier === EXPERT.tier ? 'Matched to your tier' : `Booked as ${req.tier}`}
               </span>
-              <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{req.payout}.00</span>
+              <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{requestPayout(req).toFixed(2)}</span>
             </div>
           </button>
         ))}
@@ -928,14 +938,14 @@ function RequestDetailScreen({
       </div>
 
       <p className="text-[10px] uppercase tracking-wide mb-2" style={{ color: 'var(--color-accent-text)' }}>
-        Respond within 4 minutes
+        Respond within {responseTarget(request)} minutes
       </p>
       <h1 className="font-display text-[28px] mb-5" style={{ color: 'var(--color-slate-100)' }}>Review request</h1>
 
       <div className="rounded-3xl p-5 border mb-4" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <CategoryBadge label={request.category} />
-          <UrgencyBadge level={request.urgency} />
+          {request.priority && <PriorityBadge />}
           <span className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>{request.receivedAgo}</span>
         </div>
         <p className="text-[13px] leading-[1.7]" style={{ color: 'var(--color-slate-200)' }}>{request.query}</p>
@@ -943,10 +953,11 @@ function RequestDetailScreen({
 
       <div className="rounded-2xl p-4 mb-4 space-y-3" style={{ background: 'var(--color-slate-800)' }}>
         <Row label="Tier booked" value={request.tier} />
-        <Row label="Urgency assessment" value={request.urgency} />
+        <Row label="Response speed" value={request.priority ? 'Priority — front of the queue' : 'Standard'} />
         <Row label="Format" value="Secure text consultation" />
         <Row label="Expected duration" value="Up to 30 minutes" />
-        <Row label="Your payout" value={`£${request.payout}.00`} />
+        <Row label="Your payout" value={`£${requestPayout(request).toFixed(2)}`} />
+        {request.priority && <Row label="Includes Priority bonus" value={`£${expertBonusFor('priority').toFixed(2)}`} />}
       </div>
 
       {request.tier !== EXPERT.tier && (
@@ -974,7 +985,7 @@ function RequestDetailScreen({
         className="w-full min-h-13 mt-auto rounded-2xl text-white text-[14px] font-semibold"
         style={{ background: 'var(--color-accent)' }}
       >
-        Accept consultation · £{request.payout}.00
+        Accept consultation · £{requestPayout(request).toFixed(2)}
       </button>
     </div>
   )
@@ -1324,7 +1335,7 @@ function ConsultationCompleteScreen({
       </div>
       <h2 className="font-display text-[28px] mb-2" style={{ color: 'var(--color-slate-100)' }}>Consultation complete</h2>
       <p className="text-[13px] leading-relaxed mb-2" style={{ color: 'var(--color-slate-400)' }}>
-        Your payout of <span className="font-semibold" style={{ color: 'var(--color-accent-text)' }}>£{payout}.00</span> is being processed and will appear in your balance within 24 hours.
+        Your payout of <span className="font-semibold" style={{ color: 'var(--color-accent-text)' }}>£{payout.toFixed(2)}</span> is being processed and will appear in your balance within 24 hours.
       </p>
       <p className="text-[11px] mb-8" style={{ color: 'var(--color-slate-600)' }}>
         The client will be prompted to rate this consultation.
@@ -1380,7 +1391,7 @@ function CallsScreen({
             <div className="space-y-2 mb-4">
               <Row label="When" value={`${call.day} at ${call.time}`} />
               <Row label="Duration" value={call.duration} />
-              <Row label="Your payout" value={`£${call.payout}.00`} />
+              <Row label="Your payout" value={`£${call.payout.toFixed(2)}`} />
             </div>
 
             <button
@@ -1513,7 +1524,7 @@ function HistoryScreen({ items }: { items: HistoryItem[] }) {
 
             <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--color-slate-700)' }}>
               <span className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>Payout</span>
-              <span className="text-[12px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{item.payout}.00</span>
+              <span className="text-[12px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{item.payout.toFixed(2)}</span>
             </div>
           </div>
         ))}
@@ -1661,9 +1672,9 @@ export default function ExpertDashboard() {
   }, [crossTier])
 
   // Lower-tier bookings are only offered to experts who opted in
-  // Elevated gravity first, then higher payout, so the home preview shows the request most worth opening
+  // Priority first, then longest waiting, so the home preview shows the request most worth opening
   const visibleRequests = (crossTier ? pendingRequests : pendingRequests.filter((r) => r.tier === EXPERT.tier)).slice().sort(
-    (a, b) => Number(b.urgency === 'Elevated') - Number(a.urgency === 'Elevated') || b.payout - a.payout
+    (a, b) => Number(b.priority) - Number(a.priority) || b.waitingMinutes - a.waitingMinutes
   )
   const hiddenCount = pendingRequests.length - visibleRequests.length
 
@@ -1705,7 +1716,7 @@ export default function ExpertDashboard() {
       {
         id: selectedRequest.id,
         category: selectedRequest.category,
-        payout: selectedRequest.payout,
+        payout: requestPayout(selectedRequest),
         messages: scenario.chat,
         brief: scenario.brief,
         briefUnseen: true,

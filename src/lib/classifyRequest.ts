@@ -11,7 +11,11 @@ export type ClassificationResult = {
   alternatives: CategoryId[]
   urgentSafetyFlag: boolean
   safetyMessage?: string
+  // Whether the request itself signals a deadline. Separate from gravity (stakes).
+  timePressure: TimePressure
 }
+
+export type TimePressure = { flagged: boolean; matchedTerms: string[] }
 
 const categoryTerms: Record<CategoryId, string[]> = {
   plumber: ['pipe', 'leak', 'water', 'plumber', 'stopcock', 'tap', 'drain', 'toilet', 'boiler', 'gas'],
@@ -50,6 +54,26 @@ function assessGravity(query: string, categoryId: CategoryId, urgentSafetyFlag: 
   if (hasElevatedTerm || isLong) return 'elevated'
   if (highStakesCategories.has(categoryId)) return 'standard'
   return 'routine'
+}
+
+// Time-limit signals. Deliberately narrower than the gravity list: stakes are not urgency.
+const timePressureTerms = [
+  'urgent', 'urgently', 'asap', 'immediately', 'right now', 'tonight', 'tomorrow', 'this week',
+  'deadline', 'expires', 'expiring', 'running out', 'last day', 'days left',
+]
+const timePressurePatterns = [
+  /\b(?:within|in|next)\s+(?:\d+|a|an|one|two|three|four|five|six|seven|few)\s+(?:hours?|days?|weeks?)\b/,
+  /\b(?:by|on|before)\s+(?:the\s+)?\d{1,2}(?:st|nd|rd|th)\b/,
+  /\bby\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/,
+]
+
+function assessTimePressure(query: string): TimePressure {
+  const normalized = query.toLowerCase()
+  const matchedTerms = [
+    ...timePressureTerms.filter((term) => normalized.includes(term)),
+    ...timePressurePatterns.flatMap((pattern) => normalized.match(pattern)?.[0] ?? []),
+  ]
+  return { flagged: matchedTerms.length > 0, matchedTerms }
 }
 
 const urgentPatterns: { terms: string[]; message: string }[] = [
@@ -106,5 +130,6 @@ export function classifyRequest(
       .map((item) => item.categoryId),
     urgentSafetyFlag: Boolean(urgentMatch),
     safetyMessage: urgentMatch?.message,
+    timePressure: assessTimePressure(request),
   }
 }
