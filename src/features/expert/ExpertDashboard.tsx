@@ -26,6 +26,8 @@ type DummyRequest = {
   waitingMinutes: number
   // Client paid for Priority: expert earns a bonus and should reply faster
   priority: boolean
+  // Set automatically by the safety check (never bought); jumps the queue above Priority
+  safetyFlag: boolean
 }
 
 type DummyCall = {
@@ -97,6 +99,7 @@ const INITIAL_REQUESTS: DummyRequest[] = [
     receivedAgo: '14 min ago',
     waitingMinutes: 14,
     priority: false,
+    safetyFlag: false,
   },
   {
     id: 'req-3',
@@ -108,6 +111,19 @@ const INITIAL_REQUESTS: DummyRequest[] = [
     receivedAgo: '21 min ago',
     waitingMinutes: 21,
     priority: true,
+    safetyFlag: false,
+  },
+  {
+    id: 'req-4',
+    category: 'Immigration',
+    categoryShort: 'Immigration',
+    query: "My application to extend my leave was refused and the letter says I have to leave the UK next week. I'm really struggling to cope and have had thoughts of self harm. I need to know whether I can appeal and how quickly.",
+    tier: 'Senior Verified Professional',
+    payout: 32,
+    receivedAgo: '3 min ago',
+    waitingMinutes: 3,
+    priority: false,
+    safetyFlag: true,
   },
 ]
 
@@ -483,6 +499,89 @@ const SCENARIOS: Record<string, Scenario> = {
       },
     ],
   },
+
+  'req-4': {
+    summary: 'Refused extension of leave, told to leave the UK next week — client mentions thoughts of self harm',
+    historySnippet: 'Refused leave extension — review options (safety concern raised)',
+    chat: [
+      {
+        from: 'client',
+        text: "My application to extend my leave was refused and the letter says I have to leave the UK next week. I'm really struggling to cope and have had thoughts of self harm. I need to know whether I can appeal and how quickly.",
+      },
+    ],
+    brief: {
+      situation: [
+        { label: 'Decision', value: 'Application to extend leave refused', quote: 'extend my leave was refused' },
+        { label: 'Departure', value: 'Letter says leave the UK next week', quote: 'leave the UK next week' },
+        { label: 'Wellbeing', value: 'Reports thoughts of self harm', quote: 'thoughts of self harm' },
+        { label: 'Asking', value: 'Whether they can appeal, and how quickly', quote: 'whether I can appeal and how quickly' },
+      ],
+      gaps: [
+        { text: 'Date on the decision letter' },
+        { text: 'Whether the letter gives a right of appeal or only administrative review' },
+        { text: 'Whether they are safe right now and have anyone with them' },
+        { text: 'Which application was refused' },
+      ],
+      rules: [
+        {
+          text: 'Samaritans offer free, confidential support on 116 123, 24 hours a day. In immediate danger, call 999.',
+          source: 'Samaritans',
+          url: 'https://www.samaritans.org/',
+        },
+        {
+          text: 'An immigration appeal made from inside the UK must reach the tribunal within 14 days of the decision letter being sent. From outside the UK it is 28 days.',
+          source: 'GOV.UK — Immigration and asylum tribunal',
+          url: 'https://www.gov.uk/immigration-asylum-tribunal',
+        },
+        {
+          text: 'A late appeal can be made, but the reasons for the delay must be explained and the tribunal decides whether to accept it.',
+          source: 'GOV.UK — Immigration and asylum tribunal',
+          url: 'https://www.gov.uk/immigration-asylum-tribunal',
+        },
+      ],
+    },
+    replies: [
+      {
+        text: "The letter is dated last Monday and it says I can't appeal, only ask for an administrative review. I'm staying with a friend who knows what's happened. I feel a bit calmer now that I've written it down.",
+        resolvedGaps: [
+          'Date on the decision letter',
+          'Whether the letter gives a right of appeal or only administrative review',
+          'Whether they are safe right now and have anyone with them',
+        ],
+        brief: {
+          situation: [
+            { label: 'Letter dated', value: 'Last Monday', quote: 'dated last Monday' },
+            { label: 'Rights', value: 'Administrative review only, no appeal', quote: "can't appeal, only ask for an administrative review" },
+            { label: 'Support', value: 'Staying with a friend who knows', quote: 'staying with a friend' },
+          ],
+          gaps: [{ text: 'Whether a representative or adviser is already involved' }],
+          rules: [
+            {
+              text: 'Administrative review is a check by the Home Office for caseworking errors. The decision letter states the deadline and how to apply.',
+              source: 'GOV.UK — Administrative review',
+              url: 'https://www.gov.uk/guidance/administrative-review',
+            },
+          ],
+        },
+      },
+      {
+        text: "Thank you. If I ask for the review, am I allowed to stay in the UK while it's being looked at?",
+        brief: {
+          situation: [
+            { label: 'Asking', value: 'Whether they can stay in the UK during a review', quote: 'allowed to stay in the UK while' },
+          ],
+          gaps: [{ text: 'Whether the original application was made before their leave expired' }],
+          rules: [
+            {
+              text: 'Whether someone may lawfully stay while a review is pending depends on the type of application and when it was made. The decision letter and the Home Office guidance set this out.',
+              source: 'GOV.UK — Administrative review',
+              url: 'https://www.gov.uk/guidance/administrative-review',
+            },
+          ],
+        },
+      },
+    ],
+  },
 }
 
 function withReplyBrief(brief: CaseBrief, reply: ClientReply): CaseBrief {
@@ -535,13 +634,24 @@ function PriorityBadge() {
   )
 }
 
+function SafetyBadge() {
+  return (
+    <span
+      className="inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold"
+      style={{ background: 'rgba(180,60,40,0.12)', color: '#c0472e' }}
+    >
+      Needs prompt attention
+    </span>
+  )
+}
+
 // Base tier payout plus the bonus when the client paid for Priority
 function requestPayout(req: DummyRequest): number {
   return req.payout + (req.priority ? expertBonusFor('priority') : 0)
 }
 
 function responseTarget(req: DummyRequest): number {
-  return urgencyLevels[req.priority ? 'priority' : 'standard'].expertTargetMinutes
+  return urgencyLevels[req.priority || req.safetyFlag ? 'priority' : 'standard'].expertTargetMinutes
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -783,7 +893,7 @@ function HomeScreen({
             <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-accent)' }} />
           </div>
           <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--color-slate-100)' }}>
-            {pendingRequests[0].category}{pendingRequests[0].priority ? ' — Priority' : ''}
+            {pendingRequests[0].category}{pendingRequests[0].safetyFlag ? ' — Needs prompt attention' : pendingRequests[0].priority ? ' — Priority' : ''}
           </p>
           <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--color-slate-400)' }}>
             {pendingRequests[0].query}
@@ -882,7 +992,7 @@ function RequestsScreen({
 
       {requests.length > 0 && (
         <p className="text-[10px] uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>
-          Respond within 4 minutes (2 for Priority) to maintain response score
+          Respond within 4 minutes (2 for Priority and flagged requests) to maintain response score
         </p>
       )}
 
@@ -898,6 +1008,7 @@ function RequestsScreen({
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-2 flex-wrap">
                 <CategoryBadge label={req.category} />
+                {req.safetyFlag && <SafetyBadge />}
                 {req.priority && <PriorityBadge />}
               </div>
               <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--color-slate-600)' }}>{req.receivedAgo}</span>
@@ -945,6 +1056,7 @@ function RequestDetailScreen({
       <div className="rounded-3xl p-5 border mb-4" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <CategoryBadge label={request.category} />
+          {request.safetyFlag && <SafetyBadge />}
           {request.priority && <PriorityBadge />}
           <span className="text-[10px]" style={{ color: 'var(--color-slate-600)' }}>{request.receivedAgo}</span>
         </div>
@@ -953,12 +1065,19 @@ function RequestDetailScreen({
 
       <div className="rounded-2xl p-4 mb-4 space-y-3" style={{ background: 'var(--color-slate-800)' }}>
         <Row label="Tier booked" value={request.tier} />
-        <Row label="Response speed" value={request.priority ? 'Priority — front of the queue' : 'Standard'} />
+        <Row label="Response speed" value={request.safetyFlag ? 'Flagged by safety check' : request.priority ? 'Priority — front of the queue' : 'Standard'} />
         <Row label="Format" value="Secure text consultation" />
         <Row label="Expected duration" value="Up to 30 minutes" />
         <Row label="Your payout" value={`£${requestPayout(request).toFixed(2)}`} />
         {request.priority && <Row label="Includes Priority bonus" value={`£${expertBonusFor('priority').toFixed(2)}`} />}
       </div>
+
+      {request.safetyFlag && (
+        <p className="text-[11px] leading-relaxed mb-4 rounded-2xl p-4 border" style={{ color: 'var(--color-slate-200)', borderColor: '#c0472e' }}>
+          This request was flagged automatically because the message mentions self harm. It is not a paid upgrade and does not change your payout.
+          The client has already been shown Samaritans (116 123) and 999 guidance. Please reply promptly and acknowledge how they are feeling before the legal detail.
+        </p>
+      )}
 
       {request.tier !== EXPERT.tier && (
         <p className="text-[11px] leading-relaxed mb-4 rounded-2xl p-4 border" style={{ color: 'var(--color-slate-400)', borderColor: 'var(--color-slate-700)' }}>
@@ -1672,9 +1791,9 @@ export default function ExpertDashboard() {
   }, [crossTier])
 
   // Lower-tier bookings are only offered to experts who opted in
-  // Priority first, then longest waiting, so the home preview shows the request most worth opening
+  // Safety-flagged first (system-set), then Priority (client-paid), then longest waiting, so the home preview shows the request most worth opening
   const visibleRequests = (crossTier ? pendingRequests : pendingRequests.filter((r) => r.tier === EXPERT.tier)).slice().sort(
-    (a, b) => Number(b.priority) - Number(a.priority) || b.waitingMinutes - a.waitingMinutes
+    (a, b) => Number(b.safetyFlag) - Number(a.safetyFlag) || Number(b.priority) - Number(a.priority) || b.waitingMinutes - a.waitingMinutes
   )
   const hiddenCount = pendingRequests.length - visibleRequests.length
 
