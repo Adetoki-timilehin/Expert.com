@@ -63,7 +63,8 @@ type Consultation = {
   brief: CaseBrief
   briefUnseen: boolean
   clientTyping: boolean
-  followUpSent: boolean
+  repliesDelivered: number
+  awaitingClient: boolean
   unread: boolean
 }
 
@@ -83,16 +84,6 @@ const EXPERT = {
 }
 
 const INITIAL_REQUESTS: DummyRequest[] = [
-  {
-    id: 'req-1',
-    category: 'Immigration',
-    categoryShort: 'Immigration',
-    query: "I'm on a Skilled Worker visa and my employer is threatening to terminate my contract. I need to understand whether losing this job would affect my visa status and what my options are — I've been here three years and have permanent residence in 18 months.",
-    tier: 'Senior Verified Professional',
-    payout: 32,
-    receivedAgo: '6 min ago',
-    urgency: 'Elevated',
-  },
   {
     id: 'req-2',
     category: 'Legal',
@@ -194,18 +185,27 @@ const HISTORY_ITEMS: HistoryItem[] = [
 ]
 
 // ─── Consultation scenarios (dummy chat + expert-only case brief per request) ──
+// New requests open with only the client's first message. Each expert reply
+// triggers the next entry in `replies`, which also updates the brief.
+
+type ClientReply = {
+  text: string
+  // Added to the brief (tagged New) when this reply arrives
+  brief: CaseBrief
+  // Gaps answered by this reply, removed from the brief
+  resolvedGaps?: string[]
+}
 
 type Scenario = {
   summary: string
   historySnippet: string
   chat: ChatMessage[]
   brief: CaseBrief
-  followUp: string
-  // Added to the brief once the follow-up arrives
-  followUpBrief: CaseBrief
+  replies: ClientReply[]
 }
 
 const SCENARIOS: Record<string, Scenario> = {
+  // Already in progress when the expert logs in
   'req-1': {
     summary: 'Skilled Worker visa risk — employer threatening contract termination, 3 years in UK, PR in 18 months',
     historySnippet: 'Skilled Worker visa risk — employer threatening contract termination',
@@ -261,74 +261,58 @@ const SCENARIOS: Record<string, Scenario> = {
         },
       ],
     },
-    followUp: "That's really helpful. Should I put something in writing to my employer now, or wait until they formally give me notice?",
-    followUpBrief: {
-      situation: [
-        { label: 'Asking', value: 'Whether to put concerns in writing now or wait', quote: 'Should I put something in writing' },
-      ],
-      gaps: [{ text: 'Whether anything has been confirmed by email since the meeting' }],
-      rules: [
-        {
-          text: 'Resigning, rather than being dismissed, can remove the right to bring an unfair dismissal claim.',
-          source: 'Acas — Dismissals',
-          url: 'https://www.acas.org.uk/dismissals',
+    replies: [
+      {
+        text: "That's really helpful. Should I put something in writing to my employer now, or wait until they formally give me notice?",
+        brief: {
+          situation: [
+            { label: 'Asking', value: 'Whether to put concerns in writing now or wait', quote: 'Should I put something in writing' },
+          ],
+          gaps: [{ text: 'Whether anything has been confirmed by email since the meeting' }],
+          rules: [
+            {
+              text: 'Resigning, rather than being dismissed, can remove the right to bring an unfair dismissal claim.',
+              source: 'Acas — Dismissals',
+              url: 'https://www.acas.org.uk/dismissals',
+            },
+            {
+              text: "Employees with 2 years' service can request written reasons for dismissal.",
+              source: 'GOV.UK — Dismissal: your rights',
+              url: 'https://www.gov.uk/dismissal',
+            },
+          ],
         },
-        {
-          text: "Employees with 2 years' service can request written reasons for dismissal.",
-          source: 'GOV.UK — Dismissal: your rights',
-          url: 'https://www.gov.uk/dismissal',
-        },
-      ],
-    },
+      },
+    ],
   },
 
   'req-2': {
-    summary: "Eviction letter giving two weeks' notice — 4-year tenant in Leeds, rent always paid, landlord cites family member moving in",
+    summary: "Eviction notice giving two weeks — 4-year tenant, rent always paid on time",
     historySnippet: "Eviction letter with two weeks' notice — landlord's family moving in",
     chat: [
       {
         from: 'client',
         text: "My landlord is trying to evict me with only two weeks' notice. I've been renting for four years and have always paid on time. I don't think this is legal — I'd like to understand what my rights are before I respond.",
       },
-      {
-        from: 'expert',
-        text: 'Thanks for reaching out. Two quick questions so I can give you accurate information: is the property in England? And what exactly did you receive — a letter, an email, or an official form — and does it give a reason?',
-      },
-      {
-        from: 'client',
-        text: "Yes, it's in Leeds. A letter came through the door last week saying they want the flat back for a family member and I need to leave in two weeks. I've had no complaints from them before this.",
-      },
     ],
     brief: {
       situation: [
-        { label: 'Location', value: 'Leeds, England', quote: "it's in Leeds" },
         { label: 'Tenancy length', value: '4 years', quote: 'renting for four years' },
         { label: 'Rent', value: 'Always paid on time', quote: 'always paid on time' },
-        { label: 'Notice', value: 'Letter through the door, two weeks to leave', quote: 'leave in two weeks' },
-        { label: 'Stated reason', value: 'Family member moving in', quote: 'for a family member' },
-        { label: 'History', value: 'No previous complaints from landlord', quote: 'no complaints from them' },
+        { label: 'Notice', value: 'Two weeks', quote: "only two weeks' notice" },
+        { label: 'Client believes', value: 'The notice is not legal', quote: "I don't think this is legal" },
       ],
       gaps: [
-        { text: 'Exact date the letter was delivered' },
-        { text: 'Whether the letter names a form, a section or a ground' },
+        { text: 'Whether the property is in England (rules differ across the UK)' },
+        { text: 'What was received — letter, email or official form' },
+        { text: 'Reason the landlord has given' },
         { text: 'Whether the deposit is protected in a government-backed scheme' },
-        { text: 'Whether any repair requests were made recently' },
       ],
       rules: [
         {
-          text: "Section 21 'no-fault' notices can no longer be served in England. The last date to serve one was 30 April 2026.",
+          text: "In England, Section 21 'no-fault' notices can no longer be served. The last date to serve one was 30 April 2026.",
           source: 'NRLA — Possession notices before 1 May 2026',
           url: 'https://www.nrla.org.uk/resources/ending-your-tenancy/section-21-and-section-8-notices-served-before-1st-may-2026',
-        },
-        {
-          text: 'Landlords must now use a Section 8 notice on the prescribed form, stating the ground for possession. The notice period depends on the ground.',
-          source: 'NRLA — Grounds for possession',
-          url: 'https://www.nrla.org.uk/resources/ending-your-tenancy/grounds-for-possession',
-        },
-        {
-          text: 'Where the landlord or a close family member intends to move in, the notice period is 4 months.',
-          source: 'NRLA — Grounds for possession',
-          url: 'https://www.nrla.org.uk/resources/ending-your-tenancy/grounds-for-possession',
         },
         {
           text: 'Only a court order can end the tenancy. A landlord cannot remove a tenant or change the locks themselves.',
@@ -337,65 +321,91 @@ const SCENARIOS: Record<string, Scenario> = {
         },
       ],
     },
-    followUp: "The letter just says I need to be out by the 14th — there's no form attached and no section mentioned. Do I actually have to move out by then?",
-    followUpBrief: {
-      situation: [
-        { label: 'Letter content', value: 'Move-out date only — no form, no section named', quote: 'no form attached and no section mentioned' },
-      ],
-      gaps: [{ text: 'Whether the landlord has contacted them since the letter' }],
-      rules: [
-        {
-          text: 'Tenants do not have to leave when a notice expires. The landlord must apply to court for a possession order.',
-          source: 'GOV.UK — Private renting: evictions',
-          url: 'https://www.gov.uk/private-renting-evictions',
+    replies: [
+      {
+        text: "Yes, it's in Leeds. A letter came through the door last week saying they want the flat back for a family member and I need to leave in two weeks. I've had no complaints from them before this.",
+        resolvedGaps: [
+          'Whether the property is in England (rules differ across the UK)',
+          'What was received — letter, email or official form',
+          'Reason the landlord has given',
+        ],
+        brief: {
+          situation: [
+            { label: 'Location', value: 'Leeds, England', quote: "it's in Leeds" },
+            { label: 'Received', value: 'Letter through the door, last week', quote: 'A letter came through the door' },
+            { label: 'Stated reason', value: 'Family member moving in', quote: 'for a family member' },
+            { label: 'History', value: 'No previous complaints from landlord', quote: 'no complaints from them' },
+          ],
+          gaps: [
+            { text: 'Whether the letter names a form, a section or a ground' },
+            { text: 'Whether any repair requests were made recently' },
+          ],
+          rules: [
+            {
+              text: 'Landlords must now use a Section 8 notice on the prescribed form, stating the ground for possession. The notice period depends on the ground.',
+              source: 'NRLA — Grounds for possession',
+              url: 'https://www.nrla.org.uk/resources/ending-your-tenancy/grounds-for-possession',
+            },
+            {
+              text: 'Where the landlord or a close family member intends to move in, the notice period is 4 months.',
+              source: 'NRLA — Grounds for possession',
+              url: 'https://www.nrla.org.uk/resources/ending-your-tenancy/grounds-for-possession',
+            },
+          ],
         },
-        {
-          text: 'Harassment or illegal eviction can be reported to the local council.',
-          source: 'GOV.UK — Private renting: evictions',
-          url: 'https://www.gov.uk/private-renting-evictions',
+      },
+      {
+        text: "The letter just says I need to be out by the 14th — there's no form attached and no section mentioned. Do I actually have to move out by then?",
+        resolvedGaps: ['Whether the letter names a form, a section or a ground'],
+        brief: {
+          situation: [
+            { label: 'Letter content', value: 'Move-out date only — no form, no section named', quote: 'no form attached and no section mentioned' },
+          ],
+          gaps: [{ text: 'Whether the landlord has contacted them since the letter' }],
+          rules: [
+            {
+              text: 'Tenants do not have to leave when a notice expires. The landlord must apply to court for a possession order.',
+              source: 'GOV.UK — Private renting: evictions',
+              url: 'https://www.gov.uk/private-renting-evictions',
+            },
+            {
+              text: 'Harassment or illegal eviction can be reported to the local council.',
+              source: 'GOV.UK — Private renting: evictions',
+              url: 'https://www.gov.uk/private-renting-evictions',
+            },
+          ],
         },
-      ],
-    },
+      },
+    ],
   },
 
   'req-3': {
-    summary: "Dismissed after reporting falsified safety records to HR — 6 years' service, stated reason 'performance', no prior warnings",
+    summary: "Dismissed last Friday after raising a concern about a colleague — 6 years' service",
     historySnippet: 'Dismissal after reporting falsified safety records — possible whistleblowing',
     chat: [
       {
         from: 'client',
         text: "I was dismissed from my job last Friday after raising a concern about a colleague. I'd been there for six years. I believe it was unfair dismissal and possibly retaliation. Want to understand whether I have a case before speaking to anyone.",
       },
-      {
-        from: 'expert',
-        text: "I'm sorry to hear that. To understand where you stand: what was the concern about, and who did you raise it with? And what reason did your employer give for dismissing you?",
-      },
-      {
-        from: 'client',
-        text: "I reported to HR by email that a colleague was falsifying safety inspection records. Two weeks later I was called into a meeting and dismissed for 'performance', though I've never had a warning. They gave me a short letter confirming it.",
-      },
     ],
     brief: {
       situation: [
-        { label: 'Service', value: '6 years', quote: "I'd been there for six years" },
         { label: 'Dismissed', value: 'Last Friday', quote: 'dismissed from my job last Friday' },
-        { label: 'Concern raised', value: 'Colleague falsifying safety inspection records', quote: 'falsifying safety inspection records' },
-        { label: 'Raised with', value: 'HR, by email', quote: 'I reported to HR by email' },
-        { label: 'Timing', value: 'Dismissed about two weeks after reporting', quote: 'Two weeks later' },
-        { label: 'Stated reason', value: "'Performance' — no previous warnings", quote: "never had a warning" },
-        { label: 'Paperwork', value: 'Short dismissal letter', quote: 'short letter confirming it' },
+        { label: 'Service', value: '6 years', quote: "I'd been there for six years" },
+        { label: 'Trigger', value: 'Says it followed raising a concern about a colleague', quote: 'raising a concern about a colleague' },
+        { label: 'Client believes', value: 'Unfair dismissal, possibly retaliation', quote: 'unfair dismissal and possibly retaliation' },
       ],
       gaps: [
-        { text: 'Exact date of dismissal' },
-        { text: 'Whether an appeal was offered' },
-        { text: 'Whether they kept a copy of the email to HR' },
-        { text: 'Any performance reviews or appraisals on record' },
+        { text: 'What the concern was about' },
+        { text: 'Who it was raised with, and whether in writing' },
+        { text: 'Reason the employer gave for dismissal' },
+        { text: 'Whether a dismissal letter was given' },
       ],
       rules: [
         {
-          text: 'Dismissal where the main reason is a protected disclosure (whistleblowing) is automatically unfair, with no minimum service requirement.',
-          source: 'GOV.UK — Whistleblowing for employees',
-          url: 'https://www.gov.uk/whistleblowing',
+          text: "Protection from unfair dismissal generally requires 2 years' continuous employment.",
+          source: 'GOV.UK — Dismissal: your rights',
+          url: 'https://www.gov.uk/dismissal',
         },
         {
           text: 'Before making a tribunal claim, the employee must notify Acas for early conciliation, usually within 3 months less one day of dismissal.',
@@ -407,42 +417,77 @@ const SCENARIOS: Record<string, Scenario> = {
           source: 'Acas — Early conciliation',
           url: 'https://www.acas.org.uk/early-conciliation',
         },
-        {
-          text: "Employees with 2 years' service can request written reasons for dismissal.",
-          source: 'GOV.UK — Dismissal: your rights',
-          url: 'https://www.gov.uk/dismissal',
-        },
       ],
     },
-    followUp: "They've now offered me a settlement agreement — two months' pay if I sign within a week. Should I just take it?",
-    followUpBrief: {
-      situation: [
-        { label: 'Offer', value: "Settlement agreement, two months' pay, one-week deadline", quote: 'settlement agreement' },
-      ],
-      gaps: [{ text: 'What the agreement waives — claims, reference, confidentiality terms' }],
-      rules: [
-        {
-          text: 'A settlement agreement is only legally binding if the employee has received independent legal advice on it.',
-          source: 'Acas — Settlement agreements',
-          url: 'https://www.acas.org.uk/settlement-agreements',
+    replies: [
+      {
+        text: "I reported to HR by email that a colleague was falsifying safety inspection records. Two weeks later I was called into a meeting and dismissed for 'performance', though I've never had a warning. They gave me a short letter confirming it.",
+        resolvedGaps: [
+          'What the concern was about',
+          'Who it was raised with, and whether in writing',
+          'Reason the employer gave for dismissal',
+          'Whether a dismissal letter was given',
+        ],
+        brief: {
+          situation: [
+            { label: 'Concern', value: 'Colleague falsifying safety inspection records', quote: 'falsifying safety inspection records' },
+            { label: 'Raised with', value: 'HR, by email', quote: 'I reported to HR by email' },
+            { label: 'Timing', value: 'Dismissed about two weeks after reporting', quote: 'Two weeks later' },
+            { label: 'Stated reason', value: "'Performance' — no previous warnings", quote: 'never had a warning' },
+            { label: 'Paperwork', value: 'Short dismissal letter', quote: 'short letter confirming it' },
+          ],
+          gaps: [
+            { text: 'Whether an appeal was offered' },
+            { text: 'Whether they kept a copy of the email to HR' },
+            { text: 'Any performance reviews or appraisals on record' },
+          ],
+          rules: [
+            {
+              text: 'Dismissal where the main reason is a protected disclosure (whistleblowing) is automatically unfair, with no minimum service requirement.',
+              source: 'GOV.UK — Whistleblowing for employees',
+              url: 'https://www.gov.uk/whistleblowing',
+            },
+            {
+              text: "Employees with 2 years' service can request written reasons for dismissal.",
+              source: 'GOV.UK — Dismissal: your rights',
+              url: 'https://www.gov.uk/dismissal',
+            },
+          ],
         },
-        {
-          text: 'Signing a settlement agreement usually ends the right to bring the tribunal claims it lists.',
-          source: 'Acas — Settlement agreements',
-          url: 'https://www.acas.org.uk/settlement-agreements',
+      },
+      {
+        text: "They've now offered me a settlement agreement — two months' pay if I sign within a week. Should I just take it?",
+        brief: {
+          situation: [
+            { label: 'Offer', value: "Settlement agreement, two months' pay, one-week deadline", quote: 'settlement agreement' },
+          ],
+          gaps: [{ text: 'What the agreement waives — claims, reference, confidentiality terms' }],
+          rules: [
+            {
+              text: 'A settlement agreement is only legally binding if the employee has received independent legal advice on it.',
+              source: 'Acas — Settlement agreements',
+              url: 'https://www.acas.org.uk/settlement-agreements',
+            },
+            {
+              text: 'Signing a settlement agreement usually ends the right to bring the tribunal claims it lists.',
+              source: 'Acas — Settlement agreements',
+              url: 'https://www.acas.org.uk/settlement-agreements',
+            },
+          ],
         },
-      ],
-    },
+      },
+    ],
   },
 }
 
-function withFollowUpBrief(brief: CaseBrief, added: CaseBrief): CaseBrief {
+function withReplyBrief(brief: CaseBrief, reply: ClientReply): CaseBrief {
   const old = <T extends { isNew?: boolean }>(items: T[]) => items.map((item) => ({ ...item, isNew: false }))
   const fresh = <T extends { isNew?: boolean }>(items: T[]) => items.map((item) => ({ ...item, isNew: true }))
+  const resolved = reply.resolvedGaps ?? []
   return {
-    situation: [...old(brief.situation), ...fresh(added.situation)],
-    gaps: [...old(brief.gaps), ...fresh(added.gaps)],
-    rules: [...old(brief.rules), ...fresh(added.rules)],
+    situation: [...old(brief.situation), ...fresh(reply.brief.situation)],
+    gaps: [...old(brief.gaps).filter((g) => !resolved.includes(g.text)), ...fresh(reply.brief.gaps)],
+    rules: [...old(brief.rules), ...fresh(reply.brief.rules)],
   }
 }
 
@@ -1543,7 +1588,20 @@ export default function ExpertDashboard() {
   )
   const [pendingRequests, setPendingRequests] = useState<DummyRequest[]>(INITIAL_REQUESTS)
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
-  const [consultations, setConsultations] = useState<Consultation[]>([])
+  const [consultations, setConsultations] = useState<Consultation[]>(() => [
+    {
+      id: 'req-1',
+      category: 'Immigration',
+      payout: 32,
+      messages: SCENARIOS['req-1'].chat,
+      brief: SCENARIOS['req-1'].brief,
+      briefUnseen: true,
+      clientTyping: false,
+      repliesDelivered: 0,
+      awaitingClient: false,
+      unread: true,
+    },
+  ])
   const [openConsultationId, setOpenConsultationId] = useState<string | null>(null)
   const [completedPayout, setCompletedPayout] = useState<number | null>(null)
   const [activeCalls, setActiveCalls] = useState<DummyCall[]>(DUMMY_CALLS)
@@ -1598,7 +1656,8 @@ export default function ExpertDashboard() {
         brief: scenario.brief,
         briefUnseen: true,
         clientTyping: false,
-        followUpSent: false,
+        repliesDelivered: 0,
+        awaitingClient: false,
         unread: false,
       },
     ])
@@ -1637,20 +1696,26 @@ export default function ExpertDashboard() {
 
   function handleSend(text: string) {
     if (!openConsultation) return
-    const { id, followUpSent } = openConsultation
-    updateConsultation(id, (c) => ({ messages: [...c.messages, { from: 'expert', text }], followUpSent: true }))
-    if (followUpSent) return
-    const scenario = SCENARIOS[id]
+    const { id, repliesDelivered, awaitingClient } = openConsultation
+    const reply = SCENARIOS[id].replies[repliesDelivered]
+    const scheduleReply = reply !== undefined && !awaitingClient
+    updateConsultation(id, (c) => ({
+      messages: [...c.messages, { from: 'expert', text }],
+      awaitingClient: c.awaitingClient || scheduleReply,
+    }))
+    if (!scheduleReply) return
     setTimeout(() => updateConsultation(id, () => ({ clientTyping: true })), 2500)
     setTimeout(() => {
       updateConsultation(id, (c) => ({
         clientTyping: false,
-        messages: [...c.messages, { from: 'client', text: scenario.followUp }],
+        awaitingClient: false,
+        repliesDelivered: c.repliesDelivered + 1,
+        messages: [...c.messages, { from: 'client', text: reply.text }],
         unread: openConsultationRef.current !== id,
       }))
     }, 4500)
     setTimeout(() => {
-      updateConsultation(id, (c) => ({ brief: withFollowUpBrief(c.brief, scenario.followUpBrief), briefUnseen: true }))
+      updateConsultation(id, (c) => ({ brief: withReplyBrief(c.brief, reply), briefUnseen: true }))
     }, 5000)
   }
 
