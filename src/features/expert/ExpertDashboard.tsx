@@ -573,7 +573,7 @@ function WorkspaceTabs({
             key={tab.id}
             type="button"
             onClick={() => onSelect(tab.id)}
-            className="flex-1 min-h-9 rounded-xl text-[10px] font-semibold transition-colors relative"
+            className="flex-1 min-w-0 min-h-9 rounded-xl text-[10px] font-semibold transition-colors flex items-center justify-center gap-1"
             style={{
               color: active ? 'var(--color-accent-text)' : 'var(--color-slate-400)',
               background: active ? 'var(--color-accent-soft)' : 'transparent',
@@ -582,7 +582,7 @@ function WorkspaceTabs({
             {tab.label}
             {tab.id === 'requests' && pendingCount > 0 && (
               <span
-                className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center text-white"
+                className="min-w-3.5 h-3.5 px-0.5 rounded-full text-[8px] font-bold flex items-center justify-center text-white flex-shrink-0"
                 style={{ background: 'var(--color-accent)' }}
               >
                 {pendingCount}
@@ -779,7 +779,7 @@ function HomeScreen({
             {pendingRequests[0].query}
           </p>
           <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid var(--color-accent-border)' }}>
-            <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Top payout</span>
+            <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Payout</span>
             <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{pendingRequests[0].payout}.00</span>
           </div>
         </button>
