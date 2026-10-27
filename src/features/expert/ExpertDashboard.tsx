@@ -860,10 +860,9 @@ function RequestsScreen({
             </div>
             <p className="text-[12px] leading-relaxed line-clamp-3 mb-3" style={{ color: 'var(--color-slate-200)' }}>{req.query}</p>
             <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--color-slate-700)' }}>
-              <div>
-                <span className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>Tier: </span>
-                <span className="text-[10px] font-semibold" style={{ color: 'var(--color-slate-200)' }}>{req.tier}</span>
-              </div>
+              <span className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>
+                {req.tier === EXPERT.tier ? 'Matched to your tier' : `Booked as ${req.tier}`}
+              </span>
               <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{req.payout}.00</span>
             </div>
           </button>
@@ -909,12 +908,19 @@ function RequestDetailScreen({
       </div>
 
       <div className="rounded-2xl p-4 mb-4 space-y-3" style={{ background: 'var(--color-slate-800)' }}>
-        <Row label="Expert tier booked" value={request.tier} />
+        <Row label="Tier booked" value={request.tier} />
         <Row label="Urgency assessment" value={request.urgency} />
         <Row label="Format" value="Secure text consultation" />
         <Row label="Expected duration" value="Up to 30 minutes" />
         <Row label="Your payout" value={`£${request.payout}.00`} />
       </div>
+
+      {request.tier !== EXPERT.tier && (
+        <p className="text-[11px] leading-relaxed mb-4 rounded-2xl p-4 border" style={{ color: 'var(--color-slate-400)', borderColor: 'var(--color-slate-700)' }}>
+          The client booked a {request.tier} consultation. You are being offered it because demand is high in your category.
+          Your payout is set by the tier booked, not by your own tier. Declining does not affect your profile.
+        </p>
+      )}
 
       <p className="text-[10px] leading-relaxed mb-5" style={{ color: 'var(--color-slate-600)' }}>
         Only accept requests within your verified competence. Declining does not affect your profile or response score.
