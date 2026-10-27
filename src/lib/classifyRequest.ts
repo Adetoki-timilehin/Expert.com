@@ -58,7 +58,7 @@ function assessGravity(query: string, categoryId: CategoryId, urgentSafetyFlag: 
 
 // Time-limit signals. Deliberately narrower than the gravity list: stakes are not urgency.
 const timePressureTerms = [
-  'urgent', 'urgently', 'asap', 'immediately', 'right now', 'tonight', 'tomorrow', 'this week',
+  'urgent', 'urgently', 'asap', 'immediately', 'right now', 'tonight', 'tomorrow', 'this week', 'next week',
   'deadline', 'expires', 'expiring', 'running out', 'last day', 'days left',
 ]
 const timePressurePatterns = [
