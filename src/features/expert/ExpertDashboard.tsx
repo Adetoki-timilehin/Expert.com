@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import AppShell from '../../components/layout/AppShell'
-import LayeredMessage from '../../components/chat/LayeredMessage'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -49,7 +48,12 @@ type HistoryItem = {
   format: 'Chat' | 'Call'
 }
 
-type ChatMessage = { from: 'client' | 'expert'; text: string; info?: string }
+type ChatMessage = { from: 'client' | 'expert'; text: string }
+
+// Case brief: facts and sources only, never a recommendation or drafted reply
+type BriefFact = { label: string; value: string; quote: string; isNew?: boolean }
+type BriefRule = { text: string; source: string; url: string; isNew?: boolean }
+type CaseBrief = { situation: BriefFact[]; gaps: { text: string; isNew?: boolean }[]; rules: BriefRule[] }
 
 // ─── Dummy data ──────────────────────────────────────────────────────────────
 
@@ -177,15 +181,77 @@ const HISTORY_ITEMS: HistoryItem[] = [
   },
 ]
 
-// ─── AI-prepared general information ─────────────────────────────────────────
+// ─── Case brief (expert-only, AI-prepared) ──────────────────────────────────
 
-const INITIAL_INFO = `Being told your role is "at risk" is not a notice of termination — you remain employed. Before any dismissal, your employer is expected to follow a fair process, including genuine consultation and objective selection criteria.
-
-If sponsorship of a Skilled Worker visa ends, the visa is usually shortened to 60 days (or left at its existing expiry if that is sooner). That period starts when employment ends, not when you are told you are at risk.`
+const INITIAL_BRIEF: CaseBrief = {
+  situation: [
+    { label: 'Visa', value: 'Skilled Worker', quote: "I'm on a Skilled Worker visa" },
+    { label: 'Time in UK', value: '3 years', quote: "I've been here three years" },
+    { label: 'Settlement', value: 'Expects eligibility in ~18 months', quote: 'permanent residence in 18 months' },
+    { label: 'Notice', value: 'Verbal "at risk" only — nothing in writing', quote: 'Nothing in writing yet' },
+    { label: 'Stated reason', value: 'Budget cuts', quote: 'They mentioned budget cuts' },
+    { label: 'Selection', value: 'Only person in the team told', quote: "I'm the only person in my team" },
+  ],
+  gaps: [
+    { text: 'Length of continuous service with this employer' },
+    { text: 'Contractual notice period' },
+    { text: 'Any previous performance or disciplinary issues' },
+    { text: 'Whether a consultation meeting has been offered' },
+  ],
+  rules: [
+    {
+      text: 'If a Skilled Worker\'s sponsorship ends, their permission is usually shortened to 60 days, unless less time already remains.',
+      source: 'GOV.UK — Skilled Worker visa',
+      url: 'https://www.gov.uk/skilled-worker-visa',
+    },
+    {
+      text: 'Protection from unfair dismissal generally requires 2 years\' continuous employment.',
+      source: 'GOV.UK — Dismissal: your rights',
+      url: 'https://www.gov.uk/dismissal',
+    },
+    {
+      text: 'In a redundancy, employers should consult the employee and use fair, objective selection criteria.',
+      source: 'Acas — Redundancy',
+      url: 'https://www.acas.org.uk/redundancy',
+    },
+    {
+      text: 'Statutory redundancy pay requires 2 years\' continuous service.',
+      source: 'GOV.UK — Redundancy: your rights',
+      url: 'https://www.gov.uk/redundant-your-rights',
+    },
+  ],
+}
 
 const FOLLOW_UP_CLIENT = "That's really helpful. Should I put something in writing to my employer now, or wait until they formally give me notice?"
 
-const FOLLOW_UP_INFO = `ACAS guidance expects employers to consult with employees at risk of redundancy and explain how they were selected. Written requests create a record you can rely on later. Resigning, rather than being dismissed, can remove the ability to bring an unfair dismissal claim.`
+function briefAfterFollowUp(brief: CaseBrief): CaseBrief {
+  const clear = <T extends { isNew?: boolean }>(items: T[]) => items.map((item) => ({ ...item, isNew: false }))
+  return {
+    situation: [
+      ...clear(brief.situation),
+      { label: 'Asking', value: 'Whether to put concerns in writing now or wait', quote: 'Should I put something in writing', isNew: true },
+    ],
+    gaps: [
+      ...clear(brief.gaps),
+      { text: 'Whether anything has been confirmed by email since the meeting', isNew: true },
+    ],
+    rules: [
+      ...clear(brief.rules),
+      {
+        text: 'Resigning, rather than being dismissed, can remove the right to bring an unfair dismissal claim.',
+        source: 'Acas — Dismissals',
+        url: 'https://www.acas.org.uk/dismissals',
+        isNew: true,
+      },
+      {
+        text: 'Employees with 2 years\' service can request written reasons for dismissal.',
+        source: 'GOV.UK — Dismissal: your rights',
+        url: 'https://www.gov.uk/dismissal',
+        isNew: true,
+      },
+    ],
+  }
+}
 
 const INITIAL_CHAT: ChatMessage[] = [
   {
@@ -630,46 +696,202 @@ function RequestDetailScreen({
 
 // ─── ConsultationScreen ───────────────────────────────────────────────────────
 
+function NewTag() {
+  return (
+    <span
+      className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded"
+      style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent-text)' }}
+    >
+      New
+    </span>
+  )
+}
+
+function BriefSectionTitle({ children }: { children: string }) {
+  return (
+    <p className="text-[10px] uppercase tracking-wide font-semibold mb-2" style={{ color: 'var(--color-slate-400)' }}>
+      {children}
+    </p>
+  )
+}
+
+function CaseBriefDrawer({
+  brief,
+  onClose,
+  onShowFact,
+  onInsertRule,
+}: {
+  brief: CaseBrief
+  onClose: () => void
+  onShowFact: (quote: string) => void
+  onInsertRule: (rule: BriefRule) => void
+}) {
+  return (
+    <div className="absolute inset-0 z-20 flex flex-col justify-end animate-fade-in">
+      <button
+        type="button"
+        aria-label="Close case brief"
+        onClick={onClose}
+        className="absolute inset-0"
+        style={{ background: 'rgba(0,0,0,0.45)' }}
+      />
+      <div
+        role="dialog"
+        aria-label="Case brief"
+        className="relative max-h-[85%] flex flex-col rounded-t-2xl border-t"
+        style={{ background: 'var(--color-ground-base)', borderColor: 'var(--color-slate-700)' }}
+      >
+        <div className="flex-shrink-0 px-5 pt-4 pb-3 border-b" style={{ borderColor: 'var(--color-slate-700)' }}>
+          <div className="flex items-center justify-between">
+            <p className="text-[14px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>Case brief</p>
+            <button type="button" onClick={onClose} className="min-h-10 px-2 text-[11px] font-semibold" style={{ color: 'var(--color-slate-400)' }}>
+              Close
+            </button>
+          </div>
+          <p className="text-[10px] leading-relaxed" style={{ color: 'var(--color-slate-600)' }}>
+            AI-prepared from the conversation. Facts and sources only — no recommendations. Only you can see this.
+          </p>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 space-y-5">
+          <section>
+            <BriefSectionTitle>Situation</BriefSectionTitle>
+            <div className="rounded-xl border divide-y" style={{ borderColor: 'var(--color-slate-700)' }}>
+              {brief.situation.map((fact) => (
+                <button
+                  key={fact.label + fact.value}
+                  type="button"
+                  onClick={() => onShowFact(fact.quote)}
+                  className="w-full text-left px-3 py-2.5 flex items-start gap-3"
+                  style={{ borderColor: 'var(--color-slate-700)' }}
+                >
+                  <span className="w-24 flex-shrink-0 text-[11px]" style={{ color: 'var(--color-slate-400)' }}>{fact.label}</span>
+                  <span className="flex-1 min-w-0 text-[12px] leading-snug" style={{ color: 'var(--color-slate-100)' }}>{fact.value}</span>
+                  {fact.isNew && <NewTag />}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] mt-1.5" style={{ color: 'var(--color-slate-600)' }}>Tap a fact to see where the client said it.</p>
+          </section>
+
+          <section>
+            <BriefSectionTitle>Not yet known</BriefSectionTitle>
+            <ul className="space-y-1.5">
+              {brief.gaps.map((gap) => (
+                <li key={gap.text} className="flex items-start gap-2 text-[12px] leading-snug" style={{ color: 'var(--color-slate-200)' }}>
+                  <span className="mt-1.5 w-1 h-1 rounded-full flex-shrink-0" style={{ background: 'var(--color-slate-400)' }} />
+                  <span className="flex-1">{gap.text}</span>
+                  {gap.isNew && <NewTag />}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section>
+            <BriefSectionTitle>Relevant rules</BriefSectionTitle>
+            <div className="space-y-2">
+              {brief.rules.map((rule) => (
+                <div key={rule.text} className="rounded-xl border px-3 py-2.5" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
+                  <div className="flex items-start gap-2">
+                    <p className="flex-1 text-[12px] leading-relaxed" style={{ color: 'var(--color-slate-100)' }}>{rule.text}</p>
+                    {rule.isNew && <NewTag />}
+                  </div>
+                  <div className="flex items-center justify-between gap-3 mt-2">
+                    <a
+                      href={rule.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] underline truncate"
+                      style={{ color: 'var(--color-slate-400)' }}
+                    >
+                      {rule.source}
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => onInsertRule(rule)}
+                      className="flex-shrink-0 min-h-8 px-3 rounded-lg text-[10px] font-semibold"
+                      style={{ background: 'var(--color-accent-soft)', color: 'var(--color-accent-text)' }}
+                    >
+                      Insert
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] mt-1.5 leading-relaxed" style={{ color: 'var(--color-slate-600)' }}>
+              Check each rule against its source before relying on it. You are responsible for everything you send.
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ConsultationScreen({
   messages,
-  draftInfo,
+  brief,
+  briefUnseen,
   clientTyping,
+  onOpenBrief,
   onSend,
   onComplete,
   onBack,
 }: {
   messages: ChatMessage[]
-  draftInfo: string | null
+  brief: CaseBrief
+  briefUnseen: boolean
   clientTyping: boolean
-  onSend: (advice: string, info: string | null) => void
+  onOpenBrief: () => void
+  onSend: (text: string) => void
   onComplete: () => void
   onBack: () => void
 }) {
   const listRef = useRef<HTMLDivElement>(null)
-  const [advice, setAdvice] = useState('')
-  const [info, setInfo] = useState(draftInfo ?? '')
-  const [includeInfo, setIncludeInfo] = useState(draftInfo !== null)
-
-  useEffect(() => {
-    setInfo(draftInfo ?? '')
-    setIncludeInfo(draftInfo !== null)
-  }, [draftInfo])
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const messageRefs = useRef<(HTMLDivElement | null)[]>([])
+  const [reply, setReply] = useState('')
+  const [briefOpen, setBriefOpen] = useState(false)
+  const [highlighted, setHighlighted] = useState<number | null>(null)
 
   useEffect(() => {
     const list = listRef.current
     if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' })
   }, [messages, clientTyping])
 
-  const hasInfo = draftInfo !== null && includeInfo && info.trim().length > 0
+  useEffect(() => {
+    if (highlighted === null) return
+    const timer = setTimeout(() => setHighlighted(null), 1800)
+    return () => clearTimeout(timer)
+  }, [highlighted])
+
+  function openBrief() {
+    setBriefOpen(true)
+    onOpenBrief()
+  }
+
+  function showFact(quote: string) {
+    setBriefOpen(false)
+    const index = messages.findIndex((m) => m.from === 'client' && m.text.includes(quote))
+    if (index === -1) return
+    messageRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setHighlighted(index)
+  }
+
+  function insertRule(rule: BriefRule) {
+    setReply((prev) => (prev.trim() ? `${prev.trimEnd()}\n\n` : '') + `${rule.text} (Source: ${rule.source})`)
+    setBriefOpen(false)
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }
 
   function send() {
-    if (!advice.trim()) return
-    onSend(advice.trim(), hasInfo ? info.trim() : null)
-    setAdvice('')
+    if (!reply.trim()) return
+    onSend(reply.trim())
+    setReply('')
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col animate-fade-in">
+    <div className="relative flex-1 min-h-0 flex flex-col animate-fade-in">
       {/* Header */}
       <div
         className="flex-shrink-0 px-5 py-3 border-b"
@@ -692,33 +914,53 @@ function ConsultationScreen({
         </div>
       </div>
 
-      {/* Request summary */}
-      <div className="flex-shrink-0 px-5 py-3" style={{ background: 'var(--color-accent-soft)' }}>
-        <p className="text-[10px] uppercase tracking-wide font-semibold mb-1" style={{ color: 'var(--color-accent-text)' }}>Request summary</p>
-        <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--color-slate-400)' }}>
-          Skilled Worker visa risk — employer threatening contract termination, 3 years in UK, PR in 18 months
-        </p>
+      {/* Request summary + brief entry point */}
+      <div className="flex-shrink-0 px-5 py-3 flex items-center gap-3" style={{ background: 'var(--color-accent-soft)' }}>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] uppercase tracking-wide font-semibold mb-1" style={{ color: 'var(--color-accent-text)' }}>Request summary</p>
+          <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--color-slate-400)' }}>
+            Skilled Worker visa risk — employer threatening contract termination, 3 years in UK, PR in 18 months
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openBrief}
+          className="relative flex-shrink-0 min-h-10 px-3 rounded-xl border text-[11px] font-semibold flex items-center gap-1.5"
+          style={{ background: 'var(--color-ground-base)', borderColor: 'var(--color-accent-border)', color: 'var(--color-accent-text)' }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <rect x="1.5" y="0.5" width="9" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.1" />
+            <path d="M3.5 3.5h5M3.5 6h5M3.5 8.5h3" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+          </svg>
+          Brief
+          {briefUnseen && (
+            <span
+              aria-label="Brief updated"
+              className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2"
+              style={{ background: 'var(--color-accent)', borderColor: 'var(--color-ground-base)' }}
+            />
+          )}
+        </button>
       </div>
 
       {/* Messages */}
       <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-5 space-y-4">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.from === 'expert' ? 'justify-end' : 'justify-start'}`}>
-            {msg.info ? (
-              <div className="max-w-[88%]">
-                <LayeredMessage advice={msg.text} info={msg.info} expertFirstName={EXPERT.firstName} tone="sent" />
-              </div>
-            ) : (
-              <div
-                className="max-w-[84%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed"
-                style={{
-                  background: msg.from === 'expert' ? 'var(--color-accent)' : 'var(--color-slate-900)',
-                  color: msg.from === 'expert' ? 'white' : 'var(--color-slate-200)',
-                }}
-              >
-                {msg.text}
-              </div>
-            )}
+          <div
+            key={i}
+            ref={(el) => { messageRefs.current[i] = el }}
+            className={`flex ${msg.from === 'expert' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className="max-w-[84%] rounded-2xl px-4 py-3 text-[13px] leading-relaxed whitespace-pre-line transition-shadow duration-300"
+              style={{
+                background: msg.from === 'expert' ? 'var(--color-accent)' : 'var(--color-slate-900)',
+                color: msg.from === 'expert' ? 'white' : 'var(--color-slate-200)',
+                boxShadow: highlighted === i ? '0 0 0 2px var(--color-accent)' : 'none',
+              }}
+            >
+              {msg.text}
+            </div>
           </div>
         ))}
         {clientTyping && (
@@ -737,50 +979,15 @@ function ConsultationScreen({
       </div>
 
       {/* Composer */}
-      <div className="flex-shrink-0 border-t px-4 pt-3 pb-3 space-y-2.5" style={{ borderColor: 'var(--color-slate-700)', background: 'var(--color-ground-base)' }}>
-        {draftInfo !== null && includeInfo && (
-          <div className="rounded-xl border" style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}>
-            <div className="flex items-center justify-between px-3 pt-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-slate-400)' }}>
-                General information · AI-prepared
-              </span>
-              <button
-                type="button"
-                onClick={() => setIncludeInfo(false)}
-                className="text-[10px] font-semibold"
-                style={{ color: 'var(--color-slate-400)' }}
-              >
-                Remove
-              </button>
-            </div>
-            <textarea
-              value={info}
-              onChange={(e) => setInfo(e.target.value)}
-              rows={3}
-              aria-label="AI-prepared general information"
-              className="w-full px-3 pt-1.5 pb-2.5 text-[11px] leading-relaxed resize-none outline-none bg-transparent"
-              style={{ color: 'var(--color-slate-200)' }}
-            />
-          </div>
-        )}
-        {draftInfo !== null && !includeInfo && (
-          <button
-            type="button"
-            onClick={() => setIncludeInfo(true)}
-            className="text-[10px] font-semibold"
-            style={{ color: 'var(--color-accent-text)' }}
-          >
-            + Include AI-prepared general information
-          </button>
-        )}
-
+      <div className="flex-shrink-0 border-t px-4 pt-3 pb-3" style={{ borderColor: 'var(--color-slate-700)', background: 'var(--color-ground-base)' }}>
         <div className="flex items-end gap-2">
           <textarea
-            value={advice}
-            onChange={(e) => setAdvice(e.target.value)}
-            rows={hasInfo ? 3 : 1}
-            placeholder={hasInfo ? 'Your advice for this client — appears under your name' : 'Reply to the client…'}
-            aria-label="Your advice"
+            ref={inputRef}
+            value={reply}
+            onChange={(e) => setReply(e.target.value)}
+            rows={reply.includes('\n') || reply.length > 60 ? 4 : 1}
+            placeholder="Reply to the client…"
+            aria-label="Your reply"
             className="flex-1 min-w-0 rounded-2xl px-4 py-3 outline-none text-[13px] leading-relaxed resize-none"
             style={{
               background: 'var(--color-ground-deep)',
@@ -791,7 +998,7 @@ function ConsultationScreen({
           <button
             type="button"
             onClick={send}
-            disabled={!advice.trim()}
+            disabled={!reply.trim()}
             aria-label="Send message"
             className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-40"
             style={{ background: 'var(--color-accent)' }}
@@ -801,12 +1008,16 @@ function ConsultationScreen({
             </svg>
           </button>
         </div>
-        {hasInfo && (
-          <p className="text-[10px] leading-relaxed" style={{ color: 'var(--color-slate-600)' }}>
-            The client sees your advice first, with the general information below it, labelled as AI-prepared and checked by you.
-          </p>
-        )}
       </div>
+
+      {briefOpen && (
+        <CaseBriefDrawer
+          brief={brief}
+          onClose={() => setBriefOpen(false)}
+          onShowFact={showFact}
+          onInsertRule={insertRule}
+        />
+      )}
     </div>
   )
 }
@@ -1140,7 +1351,8 @@ export default function ExpertDashboard() {
   const [consultationComplete, setConsultationComplete] = useState(false)
   const [acceptedPayout, setAcceptedPayout] = useState(0)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT)
-  const [draftInfo, setDraftInfo] = useState<string | null>(null)
+  const [brief, setBrief] = useState<CaseBrief>(INITIAL_BRIEF)
+  const [briefUnseen, setBriefUnseen] = useState(true)
   const [clientTyping, setClientTyping] = useState(false)
   const [followUpSent, setFollowUpSent] = useState(false)
   const [activeCalls, setActiveCalls] = useState<DummyCall[]>(DUMMY_CALLS)
@@ -1169,7 +1381,6 @@ export default function ExpertDashboard() {
     setAcceptedPayout(selectedRequest.payout)
     setPendingRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id))
     setConsultationActive(true)
-    setDraftInfo(INITIAL_INFO)
     setScreen('consultation')
   }
 
@@ -1199,9 +1410,8 @@ export default function ExpertDashboard() {
     setScreen('consultation') // will show the complete screen
   }
 
-  function handleSend(advice: string, info: string | null) {
-    setChatMessages((prev) => [...prev, info ? { from: 'expert', text: advice, info } : { from: 'expert', text: advice }])
-    setDraftInfo(null)
+  function handleSend(text: string) {
+    setChatMessages((prev) => [...prev, { from: 'expert', text }])
     if (!followUpSent) {
       setFollowUpSent(true)
       setTimeout(() => setClientTyping(true), 2500)
@@ -1210,7 +1420,8 @@ export default function ExpertDashboard() {
         setChatMessages((prev) => [...prev, { from: 'client', text: FOLLOW_UP_CLIENT }])
       }, 4500)
       setTimeout(() => {
-        setDraftInfo(FOLLOW_UP_INFO)
+        setBrief(briefAfterFollowUp)
+        setBriefUnseen(true)
       }, 5000)
     }
   }
@@ -1281,8 +1492,10 @@ export default function ExpertDashboard() {
         {screen === 'consultation' && !consultationComplete && (
           <ConsultationScreen
             messages={chatMessages}
-            draftInfo={draftInfo}
+            brief={brief}
+            briefUnseen={briefUnseen}
             clientTyping={clientTyping}
+            onOpenBrief={() => setBriefUnseen(false)}
             onSend={handleSend}
             onComplete={handleCompleteConsultation}
             onBack={() => setScreen('home')}

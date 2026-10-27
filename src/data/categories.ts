@@ -35,7 +35,6 @@ export type CategoryDefinition = {
     image: string
     clientMessage: string
     expertMessage: string
-    expertInfo: string
   }
 }
 
@@ -75,8 +74,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
       reviewCount: '271 reviews',
       image: 'https://images.unsplash.com/photo-1741241290790-0b69e17888da?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBVSyUyMG1hbGUlMjBwbHVtYmVyJTIwcG9ydHJhaXQlMjBoZWFkc2hvdCUyMHRyYWRlc3BlcnNvbnxlbnwxfHx8fDE3OTE4Nzc0Nzd8MA&ixlib=rb-4.1.0&q=80&w=1080',
       clientMessage: 'Hi James — a pipe has burst beneath the kitchen sink and water is leaking quickly. I have turned off the stopcock. Can you advise what I should do next and whether this needs an emergency call-out?',
-      expertMessage: "Hi — turning off the stopcock was exactly the right first step.\n\nFrom your description this is likely to need an urgent repair. Send me a clear photo of the affected joint and the pipework around it, and I can help identify the likely fitting before a call-out is arranged.",
-      expertInfo: "If water is near any electrical sockets, switch them off at the consumer unit and do not touch wet fittings. Place a bucket beneath the leak if it is safe to reach, then open the lowest cold tap in the property to drain the remaining water from the system.",
+      expertMessage: "Hi — turning off the stopcock was exactly the right first step.\n\nFrom your description this is likely to need an urgent repair. Send me a clear photo of the affected joint and the pipework around it, and I can help identify the likely fitting before a call-out is arranged.\n\nIf water is near any electrical sockets, switch them off at the consumer unit and do not touch wet fittings. Place a bucket beneath the leak if it is safe to reach, then open the lowest cold tap in the property to drain the remaining water from the system.",
     },
   },
   medical: {
@@ -115,8 +113,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
       reviewCount: '192 reviews',
       image: 'https://images.unsplash.com/photo-1680001370835-14091dcc05f3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBVSyUyMGZlbWFsZSUyMGRvY3RvciUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MXx8fHwxNzkxODgyMTQwfDA&ixlib=rb-4.1.0&q=80&w=1080',
       clientMessage: 'Hi Dr Patel — I have been having recurring headaches and want to understand what information I should prepare for my GP and whether there are signs that would need urgent care.',
-      expertMessage: "Hello — I can help you prepare for your GP and explain when urgent assessment is appropriate, but I cannot diagnose the cause through this chat.\n\nFor your appointment, note when the headaches started, how suddenly they come on, how long they last, where the pain is, and whether you notice visual changes, weakness, confusion, fever or vomiting. Those details will shape what your GP does next.",
-      expertInfo: 'A sudden extremely severe headache, new weakness, difficulty speaking, loss of consciousness or symptoms after a significant head injury need urgent emergency assessment — call 999 or go to A&E. Otherwise, a symptom diary and a list of current medication help a GP evaluate the pattern.',
+      expertMessage: "Hello — I can help you prepare for your GP and explain when urgent assessment is appropriate, but I cannot diagnose the cause through this chat.\n\nFor your appointment, note when the headaches started, how suddenly they come on, how long they last, where the pain is, and whether you notice visual changes, weakness, confusion, fever or vomiting. Those details will shape what your GP does next.\n\nA sudden extremely severe headache, new weakness, difficulty speaking, loss of consciousness or symptoms after a significant head injury need urgent emergency assessment — call 999 or go to A&E. Otherwise, a symptom diary and a list of current medication help a GP evaluate the pattern.",
     },
   },
   legal: {
@@ -155,8 +152,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
       reviewCount: '164 reviews',
       image: '/experts/jordan-adetoki.jpg',
       clientMessage: 'Hi Jordan — my employer has proposed changing my contract. I want to understand what I should ask before responding and when I might need formal advice.',
-      expertMessage: "Hello — I can help you work out the key questions and next steps, although this consultation does not create formal legal representation.\n\nBefore you respond, ask for the complete proposed change, the business reason, the consultation process and the effective date in writing. If dismissal, redundancy or a very short response deadline comes up, that is the point I would get formal advice.",
-      expertInfo: 'An employer generally needs your agreement to change your contract, unless the contract contains a valid variation clause — check whether yours does, and whether the change affects pay, hours, location or responsibilities. Silence is not automatically consent, and employment tribunal time limits can be short.',
+      expertMessage: "Hello — I can help you work out the key questions and next steps, although this consultation does not create formal legal representation.\n\nBefore you respond, ask for the complete proposed change, the business reason, the consultation process and the effective date in writing. If dismissal, redundancy or a very short response deadline comes up, that is the point I would get formal advice.\n\nAn employer generally needs your agreement to change your contract, unless the contract contains a valid variation clause — check whether yours does, and whether the change affects pay, hours, location or responsibilities. Silence is not automatically consent, and employment tribunal time limits can be short.",
     },
   },
   career: {
@@ -198,8 +194,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
       reviewCount: '138 reviews',
       image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
       clientMessage: "Hi Natalie — I have just been made redundant and I am not sure where to start. I want to update my CV and figure out what kind of role to go for next.",
-      expertMessage: "Hi — being made redundant is a lot to process, and it is completely normal to feel uncertain about where to start. I can help you think through your options and get your CV in shape.\n\nTo give you the most useful guidance, could you share your current CV and a bit about the kind of work you have been doing and what you might want to do next? Even rough notes are fine.\n\nWe will focus on what is most time-sensitive first — if you have a notice period or a specific role in mind, let me know and we can prioritise around that.",
-      expertInfo: 'With two or more years of continuous service you are usually entitled to statutory redundancy pay, and you have a right to reasonable paid time off during your notice period to look for work. Many employers also offer outplacement support — check your redundancy letter.',
+      expertMessage: "Hi — being made redundant is a lot to process, and it is completely normal to feel uncertain about where to start. I can help you think through your options and get your CV in shape.\n\nTo give you the most useful guidance, could you share your current CV and a bit about the kind of work you have been doing and what you might want to do next? Even rough notes are fine.\n\nWe will focus on what is most time-sensitive first — if you have a notice period or a specific role in mind, let me know and we can prioritise around that.\n\nWith two or more years of continuous service you are usually entitled to statutory redundancy pay, and you have a right to reasonable paid time off during your notice period to look for work. Many employers also offer outplacement support — check your redundancy letter.",
     },
   },
   immigration: {
@@ -238,8 +233,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
       reviewCount: '211 reviews',
       image: 'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
       clientMessage: 'Hi Priya — my Skilled Worker visa expires in about three months. I want to understand whether I can extend it and what the process looks like.',
-      expertMessage: "Hi — three months is enough time to prepare properly, but I would start now. Securing your employer's cooperation usually takes longer than people expect.\n\nCould you share your employer's sponsor licence status if you know it, and whether your job role or salary has changed since you last applied? That will tell me whether a straightforward extension is the right route for you.",
-      expertInfo: 'A Skilled Worker extension must be applied for before your current visa expires. You will need a new Certificate of Sponsorship from your employer, and your role and salary must still meet the eligibility requirements at the time you apply.',
+      expertMessage: "Hi — three months is enough time to prepare properly, but I would start now. Securing your employer's cooperation usually takes longer than people expect.\n\nCould you share your employer's sponsor licence status if you know it, and whether your job role or salary has changed since you last applied? That will tell me whether a straightforward extension is the right route for you.\n\nA Skilled Worker extension must be applied for before your current visa expires. You will need a new Certificate of Sponsorship from your employer, and your role and salary must still meet the eligibility requirements at the time you apply.",
     },
   },
   financial: {
@@ -278,8 +272,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
       reviewCount: '176 reviews',
       image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
       clientMessage: 'Hi Marcus — I went self-employed six months ago and I am not sure what tax I owe, what I can claim as expenses, or how to start saving properly. I feel quite lost.',
-      expertMessage: "Hi — this is one of the most common situations I see, and six months in you have time to get organised before your first deadline.\n\nTo start: could you give me a rough sense of your annual income from self-employment and whether you have any other income? Then I can give you a realistic picture of what to set aside each month.",
-      expertInfo: 'Sole traders register for Self Assessment with HMRC and pay Income Tax and Class 4 National Insurance on profits, after deducting allowable business expenses. The online return is due by 31 January after the end of the tax year. This is general guidance, not regulated financial advice — for pensions or investments, speak to an FCA-authorised adviser.',
+      expertMessage: "Hi — this is one of the most common situations I see, and six months in you have time to get organised before your first deadline.\n\nTo start: could you give me a rough sense of your annual income from self-employment and whether you have any other income? Then I can give you a realistic picture of what to set aside each month.\n\nSole traders register for Self Assessment with HMRC and pay Income Tax and Class 4 National Insurance on profits, after deducting allowable business expenses. The online return is due by 31 January after the end of the tax year. This is general guidance, not regulated financial advice — for pensions or investments, speak to an FCA-authorised adviser.",
     },
   },
   'mental-health': {
@@ -318,8 +311,7 @@ export const categories: Record<CategoryId, CategoryDefinition> = {
       reviewCount: '203 reviews',
       image: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
       clientMessage: 'Hi Dr Okafor — I have been feeling really anxious and overwhelmed lately and it has been going on for a few weeks. I wanted to understand whether this is normal and what I can do about it.',
-      expertMessage: "Hi — thank you for reaching out. What you are describing sounds genuinely difficult, and it takes courage to ask for support.\n\nCould you tell me a little more about what the anxiety and overwhelm feel like day to day — is it affecting your sleep, your concentration, or your relationships? That will help me understand what kind of support would be most useful right now.",
-      expertInfo: 'This is a supportive conversation, not a clinical assessment or ongoing therapy. If at any point you feel in crisis, contact Samaritans on 116 123 (free, 24 hours) or call 999. NHS Talking Therapies accept self-referrals for anxiety in England.',
+      expertMessage: "Hi — thank you for reaching out. What you are describing sounds genuinely difficult, and it takes courage to ask for support.\n\nCould you tell me a little more about what the anxiety and overwhelm feel like day to day — is it affecting your sleep, your concentration, or your relationships? That will help me understand what kind of support would be most useful right now.\n\nThis is a supportive conversation, not a clinical assessment or ongoing therapy. If at any point you feel in crisis, contact Samaritans on 116 123 (free, 24 hours) or call 999. NHS Talking Therapies accept self-referrals for anxiety in England.",
     },
   },
 }
