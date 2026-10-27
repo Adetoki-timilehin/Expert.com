@@ -55,6 +55,18 @@ type BriefFact = { label: string; value: string; quote: string; isNew?: boolean 
 type BriefRule = { text: string; source: string; url: string; isNew?: boolean }
 type CaseBrief = { situation: BriefFact[]; gaps: { text: string; isNew?: boolean }[]; rules: BriefRule[] }
 
+type Consultation = {
+  id: string
+  category: string
+  payout: number
+  messages: ChatMessage[]
+  brief: CaseBrief
+  briefUnseen: boolean
+  clientTyping: boolean
+  followUpSent: boolean
+  unread: boolean
+}
+
 // ─── Dummy data ──────────────────────────────────────────────────────────────
 
 const EXPERT = {
@@ -181,92 +193,258 @@ const HISTORY_ITEMS: HistoryItem[] = [
   },
 ]
 
-// ─── Case brief (expert-only, AI-prepared) ──────────────────────────────────
+// ─── Consultation scenarios (dummy chat + expert-only case brief per request) ──
 
-const INITIAL_BRIEF: CaseBrief = {
-  situation: [
-    { label: 'Visa', value: 'Skilled Worker', quote: "I'm on a Skilled Worker visa" },
-    { label: 'Time in UK', value: '3 years', quote: "I've been here three years" },
-    { label: 'Settlement', value: 'Expects eligibility in ~18 months', quote: 'permanent residence in 18 months' },
-    { label: 'Notice', value: 'Verbal "at risk" only — nothing in writing', quote: 'Nothing in writing yet' },
-    { label: 'Stated reason', value: 'Budget cuts', quote: 'They mentioned budget cuts' },
-    { label: 'Selection', value: 'Only person in the team told', quote: "I'm the only person in my team" },
-  ],
-  gaps: [
-    { text: 'Length of continuous service with this employer' },
-    { text: 'Contractual notice period' },
-    { text: 'Any previous performance or disciplinary issues' },
-    { text: 'Whether a consultation meeting has been offered' },
-  ],
-  rules: [
-    {
-      text: 'If a Skilled Worker\'s sponsorship ends, their permission is usually shortened to 60 days, unless less time already remains.',
-      source: 'GOV.UK — Skilled Worker visa',
-      url: 'https://www.gov.uk/skilled-worker-visa',
-    },
-    {
-      text: 'Protection from unfair dismissal generally requires 2 years\' continuous employment.',
-      source: 'GOV.UK — Dismissal: your rights',
-      url: 'https://www.gov.uk/dismissal',
-    },
-    {
-      text: 'In a redundancy, employers should consult the employee and use fair, objective selection criteria.',
-      source: 'Acas — Redundancy',
-      url: 'https://www.acas.org.uk/redundancy',
-    },
-    {
-      text: 'Statutory redundancy pay requires 2 years\' continuous service.',
-      source: 'GOV.UK — Redundancy: your rights',
-      url: 'https://www.gov.uk/redundant-your-rights',
-    },
-  ],
+type Scenario = {
+  summary: string
+  historySnippet: string
+  chat: ChatMessage[]
+  brief: CaseBrief
+  followUp: string
+  // Added to the brief once the follow-up arrives
+  followUpBrief: CaseBrief
 }
 
-const FOLLOW_UP_CLIENT = "That's really helpful. Should I put something in writing to my employer now, or wait until they formally give me notice?"
+const SCENARIOS: Record<string, Scenario> = {
+  'req-1': {
+    summary: 'Skilled Worker visa risk — employer threatening contract termination, 3 years in UK, PR in 18 months',
+    historySnippet: 'Skilled Worker visa risk — employer threatening contract termination',
+    chat: [
+      {
+        from: 'client',
+        text: "I'm on a Skilled Worker visa and my employer is threatening to terminate my contract. I need to understand whether losing this job would affect my visa status and what my options are — I've been here three years and have permanent residence in 18 months.",
+      },
+      {
+        from: 'expert',
+        text: 'Thank you for getting in touch. A few questions before I advise: has your employer given you formal written notice, or is this verbal so far? And is it linked to a specific reason — redundancy, performance, or something else?',
+      },
+      {
+        from: 'client',
+        text: "It's been verbal so far — my manager told me in a meeting yesterday that my position is 'at risk'. Nothing in writing yet. They mentioned budget cuts but I'm the only person in my team being told this.",
+      },
+    ],
+    brief: {
+      situation: [
+        { label: 'Visa', value: 'Skilled Worker', quote: "I'm on a Skilled Worker visa" },
+        { label: 'Time in UK', value: '3 years', quote: "I've been here three years" },
+        { label: 'Settlement', value: 'Expects eligibility in ~18 months', quote: 'permanent residence in 18 months' },
+        { label: 'Notice', value: 'Verbal "at risk" only — nothing in writing', quote: 'Nothing in writing yet' },
+        { label: 'Stated reason', value: 'Budget cuts', quote: 'They mentioned budget cuts' },
+        { label: 'Selection', value: 'Only person in the team told', quote: "I'm the only person in my team" },
+      ],
+      gaps: [
+        { text: 'Length of continuous service with this employer' },
+        { text: 'Contractual notice period' },
+        { text: 'Any previous performance or disciplinary issues' },
+        { text: 'Whether a consultation meeting has been offered' },
+      ],
+      rules: [
+        {
+          text: "If a Skilled Worker's sponsorship ends, their permission is usually shortened to 60 days, unless less time already remains.",
+          source: 'GOV.UK — Skilled Worker visa',
+          url: 'https://www.gov.uk/skilled-worker-visa',
+        },
+        {
+          text: "Protection from unfair dismissal generally requires 2 years' continuous employment.",
+          source: 'GOV.UK — Dismissal: your rights',
+          url: 'https://www.gov.uk/dismissal',
+        },
+        {
+          text: 'In a redundancy, employers should consult the employee and use fair, objective selection criteria.',
+          source: 'Acas — Redundancy',
+          url: 'https://www.acas.org.uk/redundancy',
+        },
+        {
+          text: "Statutory redundancy pay requires 2 years' continuous service.",
+          source: 'GOV.UK — Redundancy: your rights',
+          url: 'https://www.gov.uk/redundant-your-rights',
+        },
+      ],
+    },
+    followUp: "That's really helpful. Should I put something in writing to my employer now, or wait until they formally give me notice?",
+    followUpBrief: {
+      situation: [
+        { label: 'Asking', value: 'Whether to put concerns in writing now or wait', quote: 'Should I put something in writing' },
+      ],
+      gaps: [{ text: 'Whether anything has been confirmed by email since the meeting' }],
+      rules: [
+        {
+          text: 'Resigning, rather than being dismissed, can remove the right to bring an unfair dismissal claim.',
+          source: 'Acas — Dismissals',
+          url: 'https://www.acas.org.uk/dismissals',
+        },
+        {
+          text: "Employees with 2 years' service can request written reasons for dismissal.",
+          source: 'GOV.UK — Dismissal: your rights',
+          url: 'https://www.gov.uk/dismissal',
+        },
+      ],
+    },
+  },
 
-function briefAfterFollowUp(brief: CaseBrief): CaseBrief {
-  const clear = <T extends { isNew?: boolean }>(items: T[]) => items.map((item) => ({ ...item, isNew: false }))
+  'req-2': {
+    summary: "Eviction letter giving two weeks' notice — 4-year tenant in Leeds, rent always paid, landlord cites family member moving in",
+    historySnippet: "Eviction letter with two weeks' notice — landlord's family moving in",
+    chat: [
+      {
+        from: 'client',
+        text: "My landlord is trying to evict me with only two weeks' notice. I've been renting for four years and have always paid on time. I don't think this is legal — I'd like to understand what my rights are before I respond.",
+      },
+      {
+        from: 'expert',
+        text: 'Thanks for reaching out. Two quick questions so I can give you accurate information: is the property in England? And what exactly did you receive — a letter, an email, or an official form — and does it give a reason?',
+      },
+      {
+        from: 'client',
+        text: "Yes, it's in Leeds. A letter came through the door last week saying they want the flat back for a family member and I need to leave in two weeks. I've had no complaints from them before this.",
+      },
+    ],
+    brief: {
+      situation: [
+        { label: 'Location', value: 'Leeds, England', quote: "it's in Leeds" },
+        { label: 'Tenancy length', value: '4 years', quote: 'renting for four years' },
+        { label: 'Rent', value: 'Always paid on time', quote: 'always paid on time' },
+        { label: 'Notice', value: 'Letter through the door, two weeks to leave', quote: 'leave in two weeks' },
+        { label: 'Stated reason', value: 'Family member moving in', quote: 'for a family member' },
+        { label: 'History', value: 'No previous complaints from landlord', quote: 'no complaints from them' },
+      ],
+      gaps: [
+        { text: 'Exact date the letter was delivered' },
+        { text: 'Whether the letter names a form, a section or a ground' },
+        { text: 'Whether the deposit is protected in a government-backed scheme' },
+        { text: 'Whether any repair requests were made recently' },
+      ],
+      rules: [
+        {
+          text: "Section 21 'no-fault' notices can no longer be served in England. The last date to serve one was 30 April 2026.",
+          source: 'NRLA — Possession notices before 1 May 2026',
+          url: 'https://www.nrla.org.uk/resources/ending-your-tenancy/section-21-and-section-8-notices-served-before-1st-may-2026',
+        },
+        {
+          text: 'Landlords must now use a Section 8 notice on the prescribed form, stating the ground for possession. The notice period depends on the ground.',
+          source: 'NRLA — Grounds for possession',
+          url: 'https://www.nrla.org.uk/resources/ending-your-tenancy/grounds-for-possession',
+        },
+        {
+          text: 'Where the landlord or a close family member intends to move in, the notice period is 4 months.',
+          source: 'NRLA — Grounds for possession',
+          url: 'https://www.nrla.org.uk/resources/ending-your-tenancy/grounds-for-possession',
+        },
+        {
+          text: 'Only a court order can end the tenancy. A landlord cannot remove a tenant or change the locks themselves.',
+          source: 'GOV.UK — Private renting: evictions',
+          url: 'https://www.gov.uk/private-renting-evictions',
+        },
+      ],
+    },
+    followUp: "The letter just says I need to be out by the 14th — there's no form attached and no section mentioned. Do I actually have to move out by then?",
+    followUpBrief: {
+      situation: [
+        { label: 'Letter content', value: 'Move-out date only — no form, no section named', quote: 'no form attached and no section mentioned' },
+      ],
+      gaps: [{ text: 'Whether the landlord has contacted them since the letter' }],
+      rules: [
+        {
+          text: 'Tenants do not have to leave when a notice expires. The landlord must apply to court for a possession order.',
+          source: 'GOV.UK — Private renting: evictions',
+          url: 'https://www.gov.uk/private-renting-evictions',
+        },
+        {
+          text: 'Harassment or illegal eviction can be reported to the local council.',
+          source: 'GOV.UK — Private renting: evictions',
+          url: 'https://www.gov.uk/private-renting-evictions',
+        },
+      ],
+    },
+  },
+
+  'req-3': {
+    summary: "Dismissed after reporting falsified safety records to HR — 6 years' service, stated reason 'performance', no prior warnings",
+    historySnippet: 'Dismissal after reporting falsified safety records — possible whistleblowing',
+    chat: [
+      {
+        from: 'client',
+        text: "I was dismissed from my job last Friday after raising a concern about a colleague. I'd been there for six years. I believe it was unfair dismissal and possibly retaliation. Want to understand whether I have a case before speaking to anyone.",
+      },
+      {
+        from: 'expert',
+        text: "I'm sorry to hear that. To understand where you stand: what was the concern about, and who did you raise it with? And what reason did your employer give for dismissing you?",
+      },
+      {
+        from: 'client',
+        text: "I reported to HR by email that a colleague was falsifying safety inspection records. Two weeks later I was called into a meeting and dismissed for 'performance', though I've never had a warning. They gave me a short letter confirming it.",
+      },
+    ],
+    brief: {
+      situation: [
+        { label: 'Service', value: '6 years', quote: "I'd been there for six years" },
+        { label: 'Dismissed', value: 'Last Friday', quote: 'dismissed from my job last Friday' },
+        { label: 'Concern raised', value: 'Colleague falsifying safety inspection records', quote: 'falsifying safety inspection records' },
+        { label: 'Raised with', value: 'HR, by email', quote: 'I reported to HR by email' },
+        { label: 'Timing', value: 'Dismissed about two weeks after reporting', quote: 'Two weeks later' },
+        { label: 'Stated reason', value: "'Performance' — no previous warnings", quote: "never had a warning" },
+        { label: 'Paperwork', value: 'Short dismissal letter', quote: 'short letter confirming it' },
+      ],
+      gaps: [
+        { text: 'Exact date of dismissal' },
+        { text: 'Whether an appeal was offered' },
+        { text: 'Whether they kept a copy of the email to HR' },
+        { text: 'Any performance reviews or appraisals on record' },
+      ],
+      rules: [
+        {
+          text: 'Dismissal where the main reason is a protected disclosure (whistleblowing) is automatically unfair, with no minimum service requirement.',
+          source: 'GOV.UK — Whistleblowing for employees',
+          url: 'https://www.gov.uk/whistleblowing',
+        },
+        {
+          text: 'Before making a tribunal claim, the employee must notify Acas for early conciliation, usually within 3 months less one day of dismissal.',
+          source: 'Acas — Notify Acas',
+          url: 'https://www.acas.org.uk/notify',
+        },
+        {
+          text: 'Early conciliation pauses the time limit. For cases notified from 1 December 2025, it can last up to 12 weeks.',
+          source: 'Acas — Early conciliation',
+          url: 'https://www.acas.org.uk/early-conciliation',
+        },
+        {
+          text: "Employees with 2 years' service can request written reasons for dismissal.",
+          source: 'GOV.UK — Dismissal: your rights',
+          url: 'https://www.gov.uk/dismissal',
+        },
+      ],
+    },
+    followUp: "They've now offered me a settlement agreement — two months' pay if I sign within a week. Should I just take it?",
+    followUpBrief: {
+      situation: [
+        { label: 'Offer', value: "Settlement agreement, two months' pay, one-week deadline", quote: 'settlement agreement' },
+      ],
+      gaps: [{ text: 'What the agreement waives — claims, reference, confidentiality terms' }],
+      rules: [
+        {
+          text: 'A settlement agreement is only legally binding if the employee has received independent legal advice on it.',
+          source: 'Acas — Settlement agreements',
+          url: 'https://www.acas.org.uk/settlement-agreements',
+        },
+        {
+          text: 'Signing a settlement agreement usually ends the right to bring the tribunal claims it lists.',
+          source: 'Acas — Settlement agreements',
+          url: 'https://www.acas.org.uk/settlement-agreements',
+        },
+      ],
+    },
+  },
+}
+
+function withFollowUpBrief(brief: CaseBrief, added: CaseBrief): CaseBrief {
+  const old = <T extends { isNew?: boolean }>(items: T[]) => items.map((item) => ({ ...item, isNew: false }))
+  const fresh = <T extends { isNew?: boolean }>(items: T[]) => items.map((item) => ({ ...item, isNew: true }))
   return {
-    situation: [
-      ...clear(brief.situation),
-      { label: 'Asking', value: 'Whether to put concerns in writing now or wait', quote: 'Should I put something in writing', isNew: true },
-    ],
-    gaps: [
-      ...clear(brief.gaps),
-      { text: 'Whether anything has been confirmed by email since the meeting', isNew: true },
-    ],
-    rules: [
-      ...clear(brief.rules),
-      {
-        text: 'Resigning, rather than being dismissed, can remove the right to bring an unfair dismissal claim.',
-        source: 'Acas — Dismissals',
-        url: 'https://www.acas.org.uk/dismissals',
-        isNew: true,
-      },
-      {
-        text: 'Employees with 2 years\' service can request written reasons for dismissal.',
-        source: 'GOV.UK — Dismissal: your rights',
-        url: 'https://www.gov.uk/dismissal',
-        isNew: true,
-      },
-    ],
+    situation: [...old(brief.situation), ...fresh(added.situation)],
+    gaps: [...old(brief.gaps), ...fresh(added.gaps)],
+    rules: [...old(brief.rules), ...fresh(added.rules)],
   }
 }
-
-const INITIAL_CHAT: ChatMessage[] = [
-  {
-    from: 'client',
-    text: "I'm on a Skilled Worker visa and my employer is threatening to terminate my contract. I need to understand whether losing this job would affect my visa status and what my options are — I've been here three years and have permanent residence in 18 months.",
-  },
-  {
-    from: 'expert',
-    text: "Thank you for getting in touch. A few questions before I advise: has your employer given you formal written notice, or is this verbal so far? And is it linked to a specific reason — redundancy, performance, or something else?",
-  },
-  {
-    from: 'client',
-    text: "It's been verbal so far — my manager told me in a meeting yesterday that my position is 'at risk'. Nothing in writing yet. They mentioned budget cuts but I'm the only person in my team being told this.",
-  },
-]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -372,26 +550,54 @@ function WorkspaceTabs({
   )
 }
 
+// ─── ActiveConsultationCard ───────────────────────────────────────────────────
+
+function ActiveConsultationCard({ consultation, onOpen }: { consultation: Consultation; onOpen: () => void }) {
+  const last = consultation.messages[consultation.messages.length - 1]
+  const waiting = last.from === 'client'
+  const status = consultation.clientTyping ? 'Client is typing…' : waiting ? 'Client is waiting for your reply' : 'Waiting for the client'
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full rounded-3xl p-4 text-left border"
+      style={{ background: 'var(--color-slate-900)', borderColor: waiting ? 'var(--color-accent)' : 'var(--color-slate-700)' }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-2">
+          <CategoryBadge label={consultation.category} />
+          {consultation.unread && (
+            <span className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: 'var(--color-accent-text)' }}>New message</span>
+          )}
+        </div>
+        <span className="text-[12px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{consultation.payout}.00</span>
+      </div>
+      <p className="text-[12px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{status}</p>
+      <p className="text-[11px] mt-1 line-clamp-1" style={{ color: 'var(--color-slate-400)' }}>{SCENARIOS[consultation.id].summary}</p>
+    </button>
+  )
+}
+
 // ─── HomeScreen ───────────────────────────────────────────────────────────────
 
 function HomeScreen({
   available,
   pendingRequests,
-  consultationActive,
+  consultations,
   monthEarnings,
   onAvailabilityChange,
   onGoRequests,
-  onGoConsultation,
+  onOpenConsultation,
   onGoCalls,
   onGoProfile,
 }: {
   available: boolean
   pendingRequests: DummyRequest[]
-  consultationActive: boolean
+  consultations: Consultation[]
   monthEarnings: number
   onAvailabilityChange: (v: boolean) => void
   onGoRequests: () => void
-  onGoConsultation: () => void
+  onOpenConsultation: (id: string) => void
   onGoCalls: () => void
   onGoProfile: () => void
 }) {
@@ -459,26 +665,22 @@ function HomeScreen({
         </button>
       </div>
 
-      {/* Active consultation */}
-      {consultationActive && (
-        <button
-          type="button"
-          onClick={onGoConsultation}
-          className="w-full rounded-3xl p-5 mb-4 text-left border"
-          style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-accent)' }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-accent)' }} />
-            <span className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--color-accent-text)' }}>Active consultation</span>
+      {/* Active consultations */}
+      {consultations.length > 0 && (
+        <div className="mb-4">
+          <p className="text-[10px] uppercase tracking-wide font-semibold mb-2" style={{ color: 'var(--color-accent-text)' }}>
+            {consultations.length} active {consultations.length === 1 ? 'consultation' : 'consultations'}
+          </p>
+          <div className="space-y-2">
+            {consultations.map((c) => (
+              <ActiveConsultationCard key={c.id} consultation={c} onOpen={() => onOpenConsultation(c.id)} />
+            ))}
           </div>
-          <p className="text-[14px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>Client is waiting for your reply</p>
-          <p className="text-[11px] mt-1" style={{ color: 'var(--color-slate-400)' }}>Immigration — Skilled Worker visa risk</p>
-          <p className="text-[11px] mt-3 font-semibold" style={{ color: 'var(--color-accent-text)' }}>Open consultation →</p>
-        </button>
+        </div>
       )}
 
       {/* Pending requests preview */}
-      {pendingRequests.length > 0 && !consultationActive && (
+      {pendingRequests.length > 0 && (
         <button
           type="button"
           onClick={onGoRequests}
@@ -543,16 +745,16 @@ function HomeScreen({
 
 function RequestsScreen({
   requests,
-  consultationActive,
+  consultations,
   onSelect,
-  onGoConsultation,
+  onOpenConsultation,
 }: {
   requests: DummyRequest[]
-  consultationActive: boolean
+  consultations: Consultation[]
   onSelect: (id: string) => void
-  onGoConsultation: () => void
+  onOpenConsultation: (id: string) => void
 }) {
-  if (requests.length === 0 && !consultationActive) {
+  if (requests.length === 0 && consultations.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
         <div
@@ -575,19 +777,18 @@ function RequestsScreen({
         <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>Requests</h1>
       </div>
 
-      {consultationActive && (
-        <button
-          type="button"
-          onClick={onGoConsultation}
-          className="w-full rounded-3xl p-4 mb-5 text-left border"
-          style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-accent)' }}
-        >
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-accent)' }} />
-            <span className="text-[11px] font-semibold" style={{ color: 'var(--color-accent-text)' }}>Active consultation in progress</span>
+      {/* Active consultations */}
+      {consultations.length > 0 && (
+        <div className="mb-5">
+          <p className="text-[10px] uppercase tracking-wide font-semibold mb-2" style={{ color: 'var(--color-accent-text)' }}>
+            {consultations.length} active {consultations.length === 1 ? 'consultation' : 'consultations'}
+          </p>
+          <div className="space-y-2">
+            {consultations.map((c) => (
+              <ActiveConsultationCard key={c.id} consultation={c} onOpen={() => onOpenConsultation(c.id)} />
+            ))}
           </div>
-          <p className="text-[12px] mt-1.5" style={{ color: 'var(--color-slate-400)' }}>Immigration — Skilled Worker visa risk</p>
-        </button>
+        </div>
       )}
 
       {requests.length > 0 && (
@@ -829,24 +1030,19 @@ function CaseBriefDrawer({
 }
 
 function ConsultationScreen({
-  messages,
-  brief,
-  briefUnseen,
-  clientTyping,
+  consultation,
   onOpenBrief,
   onSend,
   onComplete,
   onBack,
 }: {
-  messages: ChatMessage[]
-  brief: CaseBrief
-  briefUnseen: boolean
-  clientTyping: boolean
+  consultation: Consultation
   onOpenBrief: () => void
   onSend: (text: string) => void
   onComplete: () => void
   onBack: () => void
 }) {
+  const { messages, brief, briefUnseen, clientTyping } = consultation
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const messageRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -901,7 +1097,7 @@ function ConsultationScreen({
           <button type="button" onClick={onBack} className="min-h-10 px-2 text-[11px] font-semibold" style={{ color: 'var(--color-slate-400)' }}>Back</button>
           <div className="text-center min-w-0">
             <p className="text-[13px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>Active consultation</p>
-            <p className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>Immigration</p>
+            <p className="text-[10px]" style={{ color: 'var(--color-slate-400)' }}>{consultation.category}</p>
           </div>
           <button
             type="button"
@@ -919,7 +1115,7 @@ function ConsultationScreen({
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wide font-semibold mb-1" style={{ color: 'var(--color-accent-text)' }}>Request summary</p>
           <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--color-slate-400)' }}>
-            Skilled Worker visa risk — employer threatening contract termination, 3 years in UK, PR in 18 months
+            {SCENARIOS[consultation.id].summary}
           </p>
         </div>
         <button
@@ -1347,14 +1543,9 @@ export default function ExpertDashboard() {
   )
   const [pendingRequests, setPendingRequests] = useState<DummyRequest[]>(INITIAL_REQUESTS)
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
-  const [consultationActive, setConsultationActive] = useState(false)
-  const [consultationComplete, setConsultationComplete] = useState(false)
-  const [acceptedPayout, setAcceptedPayout] = useState(0)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT)
-  const [brief, setBrief] = useState<CaseBrief>(INITIAL_BRIEF)
-  const [briefUnseen, setBriefUnseen] = useState(true)
-  const [clientTyping, setClientTyping] = useState(false)
-  const [followUpSent, setFollowUpSent] = useState(false)
+  const [consultations, setConsultations] = useState<Consultation[]>([])
+  const [openConsultationId, setOpenConsultationId] = useState<string | null>(null)
+  const [completedPayout, setCompletedPayout] = useState<number | null>(null)
   const [activeCalls, setActiveCalls] = useState<DummyCall[]>(DUMMY_CALLS)
   const [activeCallId, setActiveCallId] = useState<string | null>(null)
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>(HISTORY_ITEMS)
@@ -1376,11 +1567,43 @@ export default function ExpertDashboard() {
     navigate('/expert')
   }
 
+  // Lets follow-up timers know whether the expert is looking at that consultation
+  const openConsultationRef = useRef<string | null>(null)
+  useEffect(() => {
+    openConsultationRef.current = screen === 'consultation' ? openConsultationId : null
+  }, [screen, openConsultationId])
+
+  const openConsultation = consultations.find((c) => c.id === openConsultationId) ?? null
+
+  function updateConsultation(id: string, change: (c: Consultation) => Partial<Consultation>) {
+    setConsultations((prev) => prev.map((c) => (c.id === id ? { ...c, ...change(c) } : c)))
+  }
+
+  function handleOpenConsultation(id: string) {
+    setOpenConsultationId(id)
+    updateConsultation(id, () => ({ unread: false }))
+    setScreen('consultation')
+  }
+
   function handleAcceptRequest() {
     if (!selectedRequest) return
-    setAcceptedPayout(selectedRequest.payout)
+    const scenario = SCENARIOS[selectedRequest.id]
+    setConsultations((prev) => [
+      ...prev,
+      {
+        id: selectedRequest.id,
+        category: selectedRequest.category,
+        payout: selectedRequest.payout,
+        messages: scenario.chat,
+        brief: scenario.brief,
+        briefUnseen: true,
+        clientTyping: false,
+        followUpSent: false,
+        unread: false,
+      },
+    ])
     setPendingRequests((prev) => prev.filter((r) => r.id !== selectedRequest.id))
-    setConsultationActive(true)
+    setOpenConsultationId(selectedRequest.id)
     setScreen('consultation')
   }
 
@@ -1391,15 +1614,18 @@ export default function ExpertDashboard() {
   }
 
   function handleCompleteConsultation() {
-    setConsultationActive(false)
-    setConsultationComplete(true)
-    setMonthEarnings((prev) => prev + acceptedPayout)
+    if (!openConsultation) return
+    const { id, category, payout } = openConsultation
+    setConsultations((prev) => prev.filter((c) => c.id !== id))
+    setOpenConsultationId(null)
+    setCompletedPayout(payout)
+    setMonthEarnings((prev) => prev + payout)
     setHistoryItems((prev) => [
       {
         id: `h-new-${Date.now()}`,
-        category: 'Immigration',
-        querySnippet: 'Skilled Worker visa risk — employer threatening contract termination',
-        payout: acceptedPayout,
+        category,
+        querySnippet: SCENARIOS[id].historySnippet,
+        payout,
         daysAgo: 0,
         rating: 5,
         review: 'Awaiting client review.',
@@ -1407,23 +1633,25 @@ export default function ExpertDashboard() {
       },
       ...prev,
     ])
-    setScreen('consultation') // will show the complete screen
   }
 
   function handleSend(text: string) {
-    setChatMessages((prev) => [...prev, { from: 'expert', text }])
-    if (!followUpSent) {
-      setFollowUpSent(true)
-      setTimeout(() => setClientTyping(true), 2500)
-      setTimeout(() => {
-        setClientTyping(false)
-        setChatMessages((prev) => [...prev, { from: 'client', text: FOLLOW_UP_CLIENT }])
-      }, 4500)
-      setTimeout(() => {
-        setBrief(briefAfterFollowUp)
-        setBriefUnseen(true)
-      }, 5000)
-    }
+    if (!openConsultation) return
+    const { id, followUpSent } = openConsultation
+    updateConsultation(id, (c) => ({ messages: [...c.messages, { from: 'expert', text }], followUpSent: true }))
+    if (followUpSent) return
+    const scenario = SCENARIOS[id]
+    setTimeout(() => updateConsultation(id, () => ({ clientTyping: true })), 2500)
+    setTimeout(() => {
+      updateConsultation(id, (c) => ({
+        clientTyping: false,
+        messages: [...c.messages, { from: 'client', text: scenario.followUp }],
+        unread: openConsultationRef.current !== id,
+      }))
+    }, 4500)
+    setTimeout(() => {
+      updateConsultation(id, (c) => ({ brief: withFollowUpBrief(c.brief, scenario.followUpBrief), briefUnseen: true }))
+    }, 5000)
   }
 
   function handleJoinCall(id: string) {
@@ -1454,11 +1682,11 @@ export default function ExpertDashboard() {
           <HomeScreen
             available={available}
             pendingRequests={pendingRequests}
-            consultationActive={consultationActive}
+            consultations={consultations}
             monthEarnings={monthEarnings}
             onAvailabilityChange={setAvailable}
             onGoRequests={() => setScreen('requests')}
-            onGoConsultation={() => setScreen('consultation')}
+            onOpenConsultation={handleOpenConsultation}
             onGoCalls={() => setScreen('calls')}
             onGoProfile={() => setScreen('profile')}
           />
@@ -1467,9 +1695,9 @@ export default function ExpertDashboard() {
         {screen === 'requests' && (
           <RequestsScreen
             requests={pendingRequests}
-            consultationActive={consultationActive}
+            consultations={consultations}
             onSelect={(id) => { setSelectedRequestId(id); setScreen('request-detail') }}
-            onGoConsultation={() => setScreen('consultation')}
+            onOpenConsultation={handleOpenConsultation}
           />
         )}
 
@@ -1482,20 +1710,18 @@ export default function ExpertDashboard() {
           />
         )}
 
-        {screen === 'consultation' && consultationComplete && (
+        {screen === 'consultation' && completedPayout !== null && (
           <ConsultationCompleteScreen
-            payout={acceptedPayout}
-            onDone={() => { setConsultationComplete(false); setScreen('home') }}
+            payout={completedPayout}
+            onDone={() => { setCompletedPayout(null); setScreen('home') }}
           />
         )}
 
-        {screen === 'consultation' && !consultationComplete && (
+        {screen === 'consultation' && completedPayout === null && openConsultation && (
           <ConsultationScreen
-            messages={chatMessages}
-            brief={brief}
-            briefUnseen={briefUnseen}
-            clientTyping={clientTyping}
-            onOpenBrief={() => setBriefUnseen(false)}
+            key={openConsultation.id}
+            consultation={openConsultation}
+            onOpenBrief={() => updateConsultation(openConsultation.id, () => ({ briefUnseen: false }))}
             onSend={handleSend}
             onComplete={handleCompleteConsultation}
             onBack={() => setScreen('home')}
