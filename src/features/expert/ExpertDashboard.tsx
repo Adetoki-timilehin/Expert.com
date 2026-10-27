@@ -627,20 +627,26 @@ function ActiveConsultationCard({ consultation, onOpen }: { consultation: Consul
 
 function HomeScreen({
   available,
+  crossTier,
+  hiddenCount,
   pendingRequests,
   consultations,
   monthEarnings,
   onAvailabilityChange,
+  onCrossTierChange,
   onGoRequests,
   onOpenConsultation,
   onGoCalls,
   onGoProfile,
 }: {
   available: boolean
+  crossTier: boolean
+  hiddenCount: number
   pendingRequests: DummyRequest[]
   consultations: Consultation[]
   monthEarnings: number
   onAvailabilityChange: (v: boolean) => void
+  onCrossTierChange: (v: boolean) => void
   onGoRequests: () => void
   onOpenConsultation: (id: string) => void
   onGoCalls: () => void
@@ -673,6 +679,34 @@ function HomeScreen({
           style={{ background: available ? 'var(--color-accent)' : 'var(--color-slate-700)' }}
         >
           <span className={`block w-5 h-5 rounded-full bg-white transition-transform ${available ? 'translate-x-5' : 'translate-x-0'}`} />
+        </button>
+      </div>
+
+      {/* Cross-tier requests (opt-in) */}
+      <div
+        className="rounded-3xl p-5 mb-4 flex items-center justify-between gap-4 border"
+        style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+      >
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>Also offer me lower-tier requests</p>
+          <p className="text-[10px] mt-1 leading-relaxed" style={{ color: 'var(--color-slate-400)' }}>
+            {crossTier
+              ? 'You may be offered requests booked below your tier. Payout follows the tier booked.'
+              : hiddenCount > 0
+                ? `Off. ${hiddenCount} lower-tier ${hiddenCount === 1 ? 'request is' : 'requests are'} hidden. Payout follows the tier booked.`
+                : 'Off. You only see requests booked at your tier.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={crossTier}
+          aria-label="Also offer me lower-tier requests"
+          onClick={() => onCrossTierChange(!crossTier)}
+          className="w-12 h-7 rounded-full p-1 transition-colors flex-shrink-0"
+          style={{ background: crossTier ? 'var(--color-accent)' : 'var(--color-slate-700)' }}
+        >
+          <span className={`block w-5 h-5 rounded-full bg-white transition-transform ${crossTier ? 'translate-x-5' : 'translate-x-0'}`} />
         </button>
       </div>
 
@@ -1592,6 +1626,9 @@ export default function ExpertDashboard() {
   const [available, setAvailable] = useState(
     () => localStorage.getItem('specialist.expert.available') !== 'false'
   )
+  const [crossTier, setCrossTier] = useState(
+    () => localStorage.getItem('specialist.expert.crossTier') === 'true'
+  )
   const [pendingRequests, setPendingRequests] = useState<DummyRequest[]>(INITIAL_REQUESTS)
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null)
   const [consultations, setConsultations] = useState<Consultation[]>(() => [
@@ -1618,6 +1655,14 @@ export default function ExpertDashboard() {
   useEffect(() => {
     localStorage.setItem('specialist.expert.available', String(available))
   }, [available])
+
+  useEffect(() => {
+    localStorage.setItem('specialist.expert.crossTier', String(crossTier))
+  }, [crossTier])
+
+  // Lower-tier bookings are only offered to experts who opted in
+  const visibleRequests = crossTier ? pendingRequests : pendingRequests.filter((r) => r.tier === EXPERT.tier)
+  const hiddenCount = pendingRequests.length - visibleRequests.length
 
   const selectedRequest = pendingRequests.find((r) => r.id === selectedRequestId) ?? null
   const activeCall = activeCalls.find((c) => c.id === activeCallId) ?? null
@@ -1744,7 +1789,7 @@ export default function ExpertDashboard() {
         {showTabs && (
           <WorkspaceTabs
             current={screen}
-            pendingCount={pendingRequests.length}
+            pendingCount={visibleRequests.length}
             onSelect={setScreen}
           />
         )}
@@ -1752,10 +1797,13 @@ export default function ExpertDashboard() {
         {screen === 'home' && (
           <HomeScreen
             available={available}
-            pendingRequests={pendingRequests}
+            crossTier={crossTier}
+            hiddenCount={hiddenCount}
+            pendingRequests={visibleRequests}
             consultations={consultations}
             monthEarnings={monthEarnings}
             onAvailabilityChange={setAvailable}
+            onCrossTierChange={setCrossTier}
             onGoRequests={() => setScreen('requests')}
             onOpenConsultation={handleOpenConsultation}
             onGoCalls={() => setScreen('calls')}
@@ -1765,7 +1813,7 @@ export default function ExpertDashboard() {
 
         {screen === 'requests' && (
           <RequestsScreen
-            requests={pendingRequests}
+            requests={visibleRequests}
             consultations={consultations}
             onSelect={(id) => { setSelectedRequestId(id); setScreen('request-detail') }}
             onOpenConsultation={handleOpenConsultation}
