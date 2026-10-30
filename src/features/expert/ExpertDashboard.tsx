@@ -910,43 +910,38 @@ function HomeScreen({
 
       {/* Active consultations */}
       {consultations.length > 0 && (
-        <div className="mb-4">
-          <p className="text-[10px] uppercase tracking-wide font-semibold mb-2" style={{ color: 'var(--color-accent-text)' }}>
-            {consultations.length} active {consultations.length === 1 ? 'consultation' : 'consultations'}
-          </p>
+        <section className="mb-5">
+          <SectionHeader label={`${consultations.length} active ${consultations.length === 1 ? 'consultation' : 'consultations'}`} />
           <div className="space-y-2">
             {consultations.map((c) => (
               <ActiveConsultationCard key={c.id} consultation={c} onOpen={() => onOpenConsultation(c.id)} />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* Pending requests preview */}
       {pendingRequests.length > 0 && (
-        <button
-          type="button"
-          onClick={onGoRequests}
-          className="w-full rounded-3xl p-5 mb-4 text-left border"
-          style={{ background: 'var(--color-accent-soft)', borderColor: 'var(--color-accent-border)' }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--color-accent-text)' }}>
-              {pendingRequests.length} pending {pendingRequests.length === 1 ? 'request' : 'requests'}
-            </span>
-            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--color-accent)' }} />
-          </div>
+        <section className="mb-5">
+          <SectionHeader label={`${pendingRequests.length} pending ${pendingRequests.length === 1 ? 'request' : 'requests'}`} />
+          <button
+            type="button"
+            onClick={onGoRequests}
+            className="w-full rounded-3xl p-5 text-left border"
+            style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+          >
           <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--color-slate-100)' }}>
             {pendingRequests[0].category}{pendingRequests[0].safetyFlag ? ' — Needs prompt attention' : pendingRequests[0].priority ? ' — Priority' : ''}
           </p>
           <p className="text-[11px] leading-relaxed line-clamp-2" style={{ color: 'var(--color-slate-400)' }}>
             {pendingRequests[0].query}
           </p>
-          <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid var(--color-accent-border)' }}>
+          <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid var(--color-slate-700)' }}>
             <span className="text-[11px]" style={{ color: 'var(--color-slate-400)' }}>Payout</span>
             <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{requestPayout(pendingRequests[0]).toFixed(2)}</span>
           </div>
         </button>
+        </section>
       )}
 
       {/* Next call */}
