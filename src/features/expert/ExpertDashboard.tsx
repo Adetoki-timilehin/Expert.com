@@ -659,6 +659,31 @@ function Row({ label, value }: { label: string; value: string }) {
 
 const TAB_SCREENS: ExpertScreen[] = ['home', 'requests', 'calls', 'history', 'profile']
 
+const TAB_ICONS: Record<string, React.ReactNode> = {
+  home: <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
+  requests: (
+    <>
+      <path d="M3 13h5l1.5 3h5L16 13h5" />
+      <path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z" />
+    </>
+  ),
+  calls: (
+    <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z" />
+  ),
+  history: (
+    <>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5M12 7v5l3 2" />
+    </>
+  ),
+  profile: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </>
+  ),
+}
+
 function WorkspaceTabs({
   current,
   pendingCount,
@@ -685,21 +710,37 @@ function WorkspaceTabs({
             key={tab.id}
             type="button"
             onClick={() => onSelect(tab.id)}
-            className="flex-1 min-w-0 min-h-9 relative rounded-xl text-[10px] font-semibold transition-colors flex items-center justify-center"
+            aria-current={active ? 'page' : undefined}
+            className="flex-1 min-w-0 min-h-12 py-1.5 rounded-xl text-[10px] font-semibold transition-colors flex flex-col items-center justify-center gap-0.5"
             style={{
               color: active ? 'var(--color-accent-text)' : 'var(--color-slate-400)',
               background: active ? 'var(--color-accent-soft)' : 'transparent',
             }}
           >
-            {tab.label}
-            {tab.id === 'requests' && pendingCount > 0 && (
-              <span
-                role="img"
-                aria-label={`${pendingCount} pending requests`}
-                className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
-                style={{ background: 'var(--color-accent)' }}
-              />
-            )}
+            <span className="relative flex">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                {TAB_ICONS[tab.id]}
+              </svg>
+              {tab.id === 'requests' && pendingCount > 0 && (
+                <span
+                  role="img"
+                  aria-label={`${pendingCount} pending requests`}
+                  className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full border"
+                  style={{ background: 'var(--color-accent)', borderColor: 'var(--color-ground-base)' }}
+                />
+              )}
+            </span>
+            <span className="max-w-full truncate leading-none">{tab.label}</span>
           </button>
         )
       })}
