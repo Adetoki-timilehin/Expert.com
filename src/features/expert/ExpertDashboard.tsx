@@ -773,8 +773,16 @@ function ActiveConsultationCard({ consultation, onOpen }: { consultation: Consul
         </div>
         <span className="text-[12px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{consultation.payout.toFixed(2)}</span>
       </div>
-      <p className="text-[12px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{status}</p>
+      <div className="flex items-center gap-2">
+        <span
+          className={`w-2 h-2 rounded-full flex-shrink-0 ${waiting ? 'animate-pulse' : ''}`}
+          style={{ background: waiting ? 'var(--color-accent)' : 'var(--color-slate-600)' }}
+          aria-hidden="true"
+        />
+        <p className="text-[12px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{status}</p>
+      </div>
       <p className="text-[11px] mt-1 line-clamp-1" style={{ color: 'var(--color-slate-400)' }}>{SCENARIOS[consultation.id].summary}</p>
+      <p className="text-[10px] font-semibold mt-2" style={{ color: 'var(--color-accent-text)' }}>Open chat ›</p>
     </button>
   )
 }
@@ -976,6 +984,23 @@ function HomeScreen({
   )
 }
 
+function SectionHeader({ title, count, note }: { title: string; count: number; note?: string }) {
+  return (
+    <div className="mb-3">
+      <div className="flex items-center gap-2">
+        <h2 className="text-[15px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{title}</h2>
+        <span
+          className="min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center"
+          style={{ background: 'var(--color-slate-800)', color: 'var(--color-slate-200)' }}
+        >
+          {count}
+        </span>
+      </div>
+      {note && <p className="text-[11px] mt-1" style={{ color: 'var(--color-slate-400)' }}>{note}</p>}
+    </div>
+  )
+}
+
 // ─── RequestsScreen ───────────────────────────────────────────────────────────
 
 function RequestsScreen({
@@ -1012,24 +1037,23 @@ function RequestsScreen({
         <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>Requests</h1>
       </div>
 
-      {/* Active consultations */}
       {consultations.length > 0 && (
-        <div className="mb-5">
-          <p className="text-[10px] uppercase tracking-wide font-semibold mb-2" style={{ color: 'var(--color-accent-text)' }}>
-            {consultations.length} active {consultations.length === 1 ? 'consultation' : 'consultations'}
-          </p>
+        <section className="mb-7">
+          <SectionHeader title="In progress" count={consultations.length} note="Conversations you've accepted" />
           <div className="space-y-2">
             {consultations.map((c) => (
               <ActiveConsultationCard key={c.id} consultation={c} onOpen={() => onOpenConsultation(c.id)} />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {requests.length > 0 && (
-        <p className="text-[10px] uppercase tracking-wide mb-3" style={{ color: 'var(--color-slate-400)' }}>
-          Respond within 4 minutes (2 for Priority and flagged requests) to maintain response score
-        </p>
+        <SectionHeader
+          title="New requests"
+          count={requests.length}
+          note="Respond within 4 minutes (2 for Priority and flagged) to keep your response score"
+        />
       )}
 
       <div className="space-y-3">
@@ -1056,6 +1080,7 @@ function RequestsScreen({
               </span>
               <span className="text-[13px] font-bold" style={{ color: 'var(--color-accent-text)' }}>£{requestPayout(req).toFixed(2)}</span>
             </div>
+            <p className="text-[10px] font-semibold mt-2" style={{ color: 'var(--color-slate-400)' }}>Not accepted yet · tap to review</p>
           </button>
         ))}
       </div>
