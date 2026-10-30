@@ -12,7 +12,6 @@ type ExpertScreen =
   | 'consultation'
   | 'calls'
   | 'call-active'
-  | 'history'
   | 'profile'
 
 type DummyRequest = {
@@ -657,7 +656,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
-const TAB_SCREENS: ExpertScreen[] = ['home', 'requests', 'calls', 'history', 'profile']
+const TAB_SCREENS: ExpertScreen[] = ['home', 'requests', 'calls', 'profile']
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
   home: <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
@@ -697,12 +696,15 @@ function WorkspaceTabs({
     { id: 'home', label: 'Home' },
     { id: 'requests', label: 'Requests' },
     { id: 'calls', label: 'Calls' },
-    { id: 'history', label: 'History' },
     { id: 'profile', label: 'Profile' },
   ]
 
   return (
-    <nav className="flex gap-1 px-4 pb-2 flex-shrink-0" aria-label="Expert workspace">
+    <nav
+      className="absolute left-3 right-3 bottom-3 flex gap-1 p-1.5 rounded-full border shadow-lg"
+      style={{ background: 'var(--color-slate-900)', borderColor: 'var(--color-slate-700)' }}
+      aria-label="Expert workspace"
+    >
       {tabs.map((tab) => {
         const active = current === tab.id
         return (
@@ -711,7 +713,7 @@ function WorkspaceTabs({
             type="button"
             onClick={() => onSelect(tab.id)}
             aria-current={active ? 'page' : undefined}
-            className="flex-1 min-w-0 min-h-12 py-1.5 rounded-xl text-[10px] font-semibold transition-colors flex flex-col items-center justify-center gap-0.5"
+            className="flex-1 min-w-0 min-h-12 py-1.5 rounded-full text-[10px] font-semibold transition-colors flex flex-col items-center justify-center gap-0.5"
             style={{
               color: active ? 'var(--color-accent-text)' : 'var(--color-slate-400)',
               background: active ? 'var(--color-accent-soft)' : 'transparent',
@@ -722,7 +724,8 @@ function WorkspaceTabs({
                 width="18"
                 height="18"
                 viewBox="0 0 24 24"
-                fill="none"
+                fill={active ? 'currentColor' : 'none'}
+                fillOpacity={active ? 0.25 : 0}
                 stroke="currentColor"
                 strokeWidth="1.8"
                 strokeLinecap="round"
@@ -736,7 +739,7 @@ function WorkspaceTabs({
                   role="img"
                   aria-label={`${pendingCount} pending requests`}
                   className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full border"
-                  style={{ background: 'var(--color-accent)', borderColor: 'var(--color-ground-base)' }}
+                  style={{ background: 'var(--color-accent)', borderColor: 'var(--color-slate-900)' }}
                 />
               )}
             </span>
@@ -806,7 +809,7 @@ function HomeScreen({
   onGoProfile: () => void
 }) {
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-28 animate-fade-in">
       <div className="pt-2 pb-5">
         <p className="text-[11px] uppercase tracking-wide" style={{ color: 'var(--color-slate-400)' }}>Good morning</p>
         <h1 className="font-display text-[30px]" style={{ color: 'var(--color-slate-100)' }}>{EXPERT.name}</h1>
@@ -1004,7 +1007,7 @@ function RequestsScreen({
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-28 animate-fade-in">
       <div className="pt-2 pb-5">
         <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>Requests</h1>
       </div>
@@ -1514,7 +1517,7 @@ function CallsScreen({
   onJoin: (id: string) => void
 }) {
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-28 animate-fade-in">
       <div className="pt-2 pb-5">
         <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>Scheduled calls</h1>
       </div>
@@ -1633,14 +1636,12 @@ function CallActiveScreen({
   )
 }
 
-// ─── HistoryScreen ────────────────────────────────────────────────────────────
+// ─── History list ────────────────────────────────────────────────────────────
 
-function HistoryScreen({ items }: { items: HistoryItem[] }) {
+function HistoryList({ items }: { items: HistoryItem[] }) {
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
-      <div className="pt-2 pb-5">
-        <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>History</h1>
-      </div>
+    <section aria-labelledby="history-heading" className="mt-8">
+      <h2 id="history-heading" className="font-display text-[22px] mb-4" style={{ color: 'var(--color-slate-100)' }}>History</h2>
       <div className="space-y-3">
         {items.map((item) => (
           <div
@@ -1681,15 +1682,15 @@ function HistoryScreen({ items }: { items: HistoryItem[] }) {
           </div>
         ))}
       </div>
-    </div>
+    </section>
   )
 }
 
 // ─── ProfileScreen ────────────────────────────────────────────────────────────
 
-function ProfileScreen() {
+function ProfileScreen({ historyItems }: { historyItems: HistoryItem[] }) {
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-8 animate-fade-in">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-28 animate-fade-in">
       <div className="pt-2 pb-5">
         <h1 className="font-display text-[28px]" style={{ color: 'var(--color-slate-100)' }}>Profile</h1>
       </div>
@@ -1777,6 +1778,8 @@ function ProfileScreen() {
           <Row label="Substantiated complaints" value="0" />
         </div>
       </div>
+
+      <HistoryList items={historyItems} />
     </div>
   )
 }
@@ -1951,15 +1954,7 @@ export default function ExpertDashboard() {
 
   return (
     <AppShell onHome={() => navigate('/expert')} onBack={handleBack}>
-      <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        {showTabs && (
-          <WorkspaceTabs
-            current={screen}
-            pendingCount={visibleRequests.length}
-            onSelect={setScreen}
-          />
-        )}
-
+      <main className="relative flex-1 min-h-0 overflow-hidden flex flex-col">
         {screen === 'home' && (
           <HomeScreen
             available={available}
@@ -2027,12 +2022,15 @@ export default function ExpertDashboard() {
           />
         )}
 
-        {screen === 'history' && (
-          <HistoryScreen items={historyItems} />
-        )}
-
         {screen === 'profile' && (
-          <ProfileScreen />
+          <ProfileScreen historyItems={historyItems} />
+        )}
+        {showTabs && (
+          <WorkspaceTabs
+            current={screen}
+            pendingCount={visibleRequests.length}
+            onSelect={setScreen}
+          />
         )}
       </main>
     </AppShell>
