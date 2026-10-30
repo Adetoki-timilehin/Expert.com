@@ -685,7 +685,7 @@ function WorkspaceTabs({
             key={tab.id}
             type="button"
             onClick={() => onSelect(tab.id)}
-            className="flex-1 min-w-0 min-h-9 rounded-xl text-[10px] font-semibold transition-colors flex items-center justify-center gap-1"
+            className="flex-1 min-w-0 min-h-9 relative rounded-xl text-[10px] font-semibold transition-colors flex items-center justify-center"
             style={{
               color: active ? 'var(--color-accent-text)' : 'var(--color-slate-400)',
               background: active ? 'var(--color-accent-soft)' : 'transparent',
@@ -694,11 +694,11 @@ function WorkspaceTabs({
             {tab.label}
             {tab.id === 'requests' && pendingCount > 0 && (
               <span
-                className="min-w-3.5 h-3.5 px-0.5 rounded-full text-[8px] font-bold flex items-center justify-center text-white flex-shrink-0"
+                role="img"
+                aria-label={`${pendingCount} pending requests`}
+                className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
                 style={{ background: 'var(--color-accent)' }}
-              >
-                {pendingCount}
-              </span>
+              />
             )}
           </button>
         )
