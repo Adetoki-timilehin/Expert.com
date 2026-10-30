@@ -117,13 +117,13 @@ const INITIAL_REQUESTS: DummyRequest[] = [
     id: 'req-4',
     category: 'Immigration',
     categoryShort: 'Immigration',
-    query: "My application to extend my leave was refused and the letter says I have to leave the UK next week. I'm really struggling to cope and have had thoughts of self harm. I need to know whether I can appeal and how quickly.",
+    query: "My application to extend my leave was refused and the letter says I have to leave the UK next week. I'm very worried about what happens next. I need to know whether I can appeal and how quickly.",
     tier: 'Senior Verified Professional',
     payout: 32,
     receivedAgo: '3 min ago',
     waitingMinutes: 3,
     priority: false,
-    safetyFlag: true,
+    safetyFlag: false,
   },
 ]
 
@@ -501,33 +501,26 @@ const SCENARIOS: Record<string, Scenario> = {
   },
 
   'req-4': {
-    summary: 'Refused extension of leave, told to leave the UK next week — client mentions thoughts of self harm',
-    historySnippet: 'Refused leave extension — review options (safety concern raised)',
+    summary: 'Refused extension of leave, told to leave the UK next week',
+    historySnippet: 'Refused leave extension — review options',
     chat: [
       {
         from: 'client',
-        text: "My application to extend my leave was refused and the letter says I have to leave the UK next week. I'm really struggling to cope and have had thoughts of self harm. I need to know whether I can appeal and how quickly.",
+        text: "My application to extend my leave was refused and the letter says I have to leave the UK next week. I'm very worried about what happens next. I need to know whether I can appeal and how quickly.",
       },
     ],
     brief: {
       situation: [
         { label: 'Decision', value: 'Application to extend leave refused', quote: 'extend my leave was refused' },
         { label: 'Departure', value: 'Letter says leave the UK next week', quote: 'leave the UK next week' },
-        { label: 'Wellbeing', value: 'Reports thoughts of self harm', quote: 'thoughts of self harm' },
         { label: 'Asking', value: 'Whether they can appeal, and how quickly', quote: 'whether I can appeal and how quickly' },
       ],
       gaps: [
         { text: 'Date on the decision letter' },
         { text: 'Whether the letter gives a right of appeal or only administrative review' },
-        { text: 'Whether they are safe right now and have anyone with them' },
         { text: 'Which application was refused' },
       ],
       rules: [
-        {
-          text: 'Samaritans offer free, confidential support on 116 123, 24 hours a day. In immediate danger, call 999.',
-          source: 'Samaritans',
-          url: 'https://www.samaritans.org/',
-        },
         {
           text: 'An immigration appeal made from inside the UK must reach the tribunal within 14 days of the decision letter being sent. From outside the UK it is 28 days.',
           source: 'GOV.UK — Immigration and asylum tribunal',
@@ -542,17 +535,16 @@ const SCENARIOS: Record<string, Scenario> = {
     },
     replies: [
       {
-        text: "The letter is dated last Monday and it says I can't appeal, only ask for an administrative review. I'm staying with a friend who knows what's happened. I feel a bit calmer now that I've written it down.",
+        text: "The letter is dated last Monday and it says I can't appeal, only ask for an administrative review. I'm staying with a friend for now.",
         resolvedGaps: [
           'Date on the decision letter',
           'Whether the letter gives a right of appeal or only administrative review',
-          'Whether they are safe right now and have anyone with them',
         ],
         brief: {
           situation: [
             { label: 'Letter dated', value: 'Last Monday', quote: 'dated last Monday' },
             { label: 'Rights', value: 'Administrative review only, no appeal', quote: "can't appeal, only ask for an administrative review" },
-            { label: 'Support', value: 'Staying with a friend who knows', quote: 'staying with a friend' },
+            { label: 'Staying', value: 'With a friend for now', quote: 'staying with a friend' },
           ],
           gaps: [{ text: 'Whether a representative or adviser is already involved' }],
           rules: [
@@ -1074,8 +1066,8 @@ function RequestDetailScreen({
 
       {request.safetyFlag && (
         <p className="text-[11px] leading-relaxed mb-4 rounded-2xl p-4 border" style={{ color: 'var(--color-slate-200)', borderColor: '#c0472e' }}>
-          This request was flagged automatically because the message mentions self harm. It is not a paid upgrade and does not change your payout.
-          The client has already been shown Samaritans (116 123) and 999 guidance. Please reply promptly and acknowledge how they are feeling before the legal detail.
+          This request was flagged automatically because the message suggests a safety concern. It is not a paid upgrade and does not change your payout.
+          The client has already been shown safety guidance. Please reply promptly and acknowledge their situation before the legal detail.
         </p>
       )}
 
