@@ -984,18 +984,10 @@ function HomeScreen({
   )
 }
 
-function SectionHeader({ title, count, note }: { title: string; count: number; note?: string }) {
+function SectionHeader({ label, note }: { label: string; note?: string }) {
   return (
     <div className="mb-3">
-      <div className="flex items-center gap-2">
-        <h2 className="text-[15px] font-semibold" style={{ color: 'var(--color-slate-100)' }}>{title}</h2>
-        <span
-          className="min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center"
-          style={{ background: 'var(--color-slate-800)', color: 'var(--color-slate-200)' }}
-        >
-          {count}
-        </span>
-      </div>
+      <p className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: 'var(--color-accent-text)' }}>{label}</p>
       {note && <p className="text-[11px] mt-1" style={{ color: 'var(--color-slate-400)' }}>{note}</p>}
     </div>
   )
@@ -1039,7 +1031,7 @@ function RequestsScreen({
 
       {consultations.length > 0 && (
         <section className="mb-7">
-          <SectionHeader title="In progress" count={consultations.length} note="Conversations you've accepted" />
+          <SectionHeader label={`${consultations.length} active ${consultations.length === 1 ? 'consultation' : 'consultations'}`} />
           <div className="space-y-2">
             {consultations.map((c) => (
               <ActiveConsultationCard key={c.id} consultation={c} onOpen={() => onOpenConsultation(c.id)} />
@@ -1050,8 +1042,7 @@ function RequestsScreen({
 
       {requests.length > 0 && (
         <SectionHeader
-          title="New requests"
-          count={requests.length}
+          label={`${requests.length} pending ${requests.length === 1 ? 'request' : 'requests'}`}
           note="Respond within 4 minutes (2 for Priority and flagged) to keep your response score"
         />
       )}
